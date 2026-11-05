@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - Equipe & Permissões</title>
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    /* CARDS & METRICAS */
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .metric-label { font-size: 0.78rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+    .metric-value { font-size: 1.35rem; font-weight: 800; color: var(--text-main); }
+
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    /* BOTOES E INPUTS */
+    .btn-action { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-action:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--border); color: var(--text-main); border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+    .btn-danger { background: var(--danger); color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.78rem; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-muted); margin-bottom: 4px; }
+    .form-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 9px 12px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+
+    /* TABELA */
+    .table-container { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; background: rgba(0,0,0,0.1); }
+
+    .badge-role { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; background: rgba(56, 189, 248, 0.15); color: var(--info); }
+    .badge-type { padding: 4px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: rgba(249, 115, 22, 0.15); color: var(--primary); margin-left: 6px; }
+    .badge-status { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+    .badge-active { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .badge-inactive { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px 15px 80px 15px; }
+      .toggle-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link active"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>Gestão de Equipe</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <!-- CARDS DE METRICAS DE PRODUTIVIDADE -->
+    <div class="grid-4">
+      <div class="metric-card">
+        <span class="metric-label">Total de Colaboradores</span>
+        <span class="metric-value" id="statTotalStaff">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Membros Ativos</span>
+        <span class="metric-value" style="color: var(--success);" id="statActiveStaff">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Vendas da Equipe (Mês)</span>
+        <span class="metric-value" style="color: var(--info);" id="statStaffSales">R$ 0,00</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Comissões / Gorjetas</span>
+        <span class="metric-value" style="color: var(--warning);" id="statStaffCommissions">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- LISTA DE MEMBROS DA EQUIPE -->
+    <div class="card-box">
+      <div class="card-title">
+        <span>👥 Membros Cadastrados</span>
+        <button class="btn-action" onclick="openStaffModal()">➕ Novo Colaborador</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Função / Cargo</th>
+              <th>Telefone</th>
+              <th>Comissão (%)</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="staffTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                Nenhum colaborador cadastrado. Clique em "Novo Colaborador" para começar.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL DE CADASTRO/EDIÇÃO DE COLABORADOR -->
+  <div class="modal-overlay" id="staffModal">
+    <div class="custom-modal-card">
+      <div class="card-title" id="staffModalTitle">Cadastrar Colaborador</div>
+      <input type="hidden" id="staffEditId">
+      
+      <div class="form-group">
+        <label>Nome Completo:*</label>
+        <input type="text" class="form-input" id="staffName" placeholder="Ex: Nome do Colaborador">
+      </div>
+
+      <div class="form-group">
+        <label>Telefone / WhatsApp (Obrigatório p/ Entregadores):</label>
+        <input type="text" class="form-input" id="staffPhone" placeholder="(00) 00000-0000" maxlength="15" oninput="handlePhoneInput(this)" onkeydown="handlePhoneKeyDown(event, this)">
+      </div>
+
+      <div class="form-group">
+        <label>Função / Cargo:*</label>
+        <select class="form-input" id="staffRole" onchange="toggleCourierTypeField()">
+          <option value="Gerente">Gerente</option>
+          <option value="Operador de Caixa">Operador de Caixa</option>
+          <option value="Garçom / Atendente">Garçom / Atendente</option>
+          <option value="Cozinha / KDS">Cozinha / KDS</option>
+          <option value="Entregador">Entregador</option>
+        </select>
+      </div>
+
+      <!-- CAMPO DE TIPO DE VÍNCULO (EXCLUSIVO PARA ENTREGADORES) -->
+      <div class="form-group" id="courierTypeGroup" style="display: none;">
+        <label>Tipo de Vínculo do Entregador:</label>
+        <select class="form-input" id="staffCourierType">
+          <option value="Próprio">Entregador Próprio</option>
+          <option value="Terceirizado">Entregador Terceirizado / Aplicativo</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Porcentagem de Comissão / Gorjeta (%):</label>
+        <input type="number" class="form-input" id="staffCommission" placeholder="Ex: 0" step="0.5">
+      </div>
+
+      <div class="form-group">
+        <label>Status do Colaborador:*</label>
+        <select class="form-input" id="staffStatus">
+          <option value="ativo">Ativo</option>
+          <option value="inativo">Inativo</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="closeStaffModal()">Cancelar</button>
+        <button class="btn-action" style="flex: 1;" onclick="saveStaffMember()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ALERTA / CONFIRMAÇÃO -->
+  <div class="modal-overlay" id="customAlertModal">
+    <div class="custom-modal-card" style="text-align: center; max-width: 380px;">
+      <div style="font-size: 2.8rem; margin-bottom: 10px;" id="alertIcon">⚠️</div>
+      <div style="font-size: 1.15rem; font-weight: bold; margin-bottom: 8px;" id="alertTitle">Atenção</div>
+      <div style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.4;" id="alertMessage">Preencha os campos.</div>
+      <div id="alertButtons" style="display: flex; gap: 10px;">
+        <button class="btn-action" onclick="closeCustomAlert()" style="width: 100%; justify-content: center;">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let staffMembers = [];
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    function toggleCourierTypeField() {
+      const role = document.getElementById('staffRole').value;
+      const group = document.getElementById('courierTypeGroup');
+      if (role === 'Entregador') {
+        group.style.display = 'block';
+      } else {
+        group.style.display = 'none';
+      }
+    }
+
+    // FORMATAÇÃO AUTOMÁTICA DE TELEFONE
+    function handlePhoneKeyDown(e, input) {
+      if (e.key === 'Backspace') {
+        let v = input.value;
+        if (v.endsWith('-') || v.endsWith(' ') || v.endsWith(')')) {
+          e.preventDefault();
+          let digits = v.replace(/\D/g, '').slice(0, -1);
+          formatAndSetPhone(input, digits);
+        }
+      }
+    }
+
+    function handlePhoneInput(input) {
+      let digits = input.value.replace(/\D/g, '');
+      formatAndSetPhone(input, digits);
+    }
+
+    function formatAndSetPhone(input, digits) {
+      if (digits.length > 11) digits = digits.slice(0, 11);
+      if (digits.length === 0) input.value = '';
+      else if (digits.length <= 2) input.value = `(${digits}`;
+      else if (digits.length <= 6) input.value = `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+      else if (digits.length <= 10) input.value = `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+      else input.value = `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    }
+
+    function showCustomAlert(title, message, icon = '⚠️', customButtonsHtml = null) {
+      document.getElementById('alertIcon').innerText = icon;
+      document.getElementById('alertTitle').innerText = title;
+      document.getElementById('alertMessage').innerText = message;
+      
+      const btnContainer = document.getElementById('alertButtons');
+      if (customButtonsHtml) {
+        btnContainer.innerHTML = customButtonsHtml;
+      } else {
+        btnContainer.innerHTML = `<button class="btn-action" onclick="closeCustomAlert()" style="width: 100%; justify-content: center;">Entendido</button>`;
+      }
+
+      document.getElementById('customAlertModal').classList.add('active');
+    }
+
+    function closeCustomAlert() {
+      document.getElementById('customAlertModal').classList.remove('active');
+    }
+
+    // SINCRONIZAÇÃO COMPLETA COM ENTREGADORES (MÓDULO 21)
+    function syncCouriersStorage(staffList) {
+      let couriers = JSON.parse(localStorage.getItem('vortex_couriers')) || [];
+      
+      let teamCouriers = staffList.filter(m => String(m.role || '').toLowerCase().includes('entregador'));
+      
+      let map = new Map();
+      couriers.forEach(c => map.set(c.name.trim().toLowerCase(), c));
+      
+      teamCouriers.forEach(t => {
+        if ((t.status || 'ativo') === 'ativo') {
+          map.set(t.name.trim().toLowerCase(), {
+            id: t.id,
+            name: t.name,
+            phone: t.phone || t.telefone || '',
+            type: t.courierType || t.type || 'Próprio'
+          });
+        } else {
+          map.delete(t.name.trim().toLowerCase());
+        }
+      });
+
+      let finalCouriers = Array.from(map.values());
+      localStorage.setItem('vortex_couriers', JSON.stringify(finalCouriers));
+    }
+
+    // CARREGAR COLABORADORES DO SUPABASE OU LOCALSTORAGE
+    async function loadStaffData() {
+      let loaded = false;
+      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('vortex_staff').select('*');
+          if (data) {
+            staffMembers = data;
+            loaded = true;
+          }
+        } catch (e) {}
+      }
+
+      if (!loaded) {
+        const local = localStorage.getItem('vortex_team_members');
+        if (local) {
+          try { staffMembers = JSON.parse(local); } catch(e){}
+        } else {
+          staffMembers = [];
+        }
+      }
+
+      // Garante que todo colaborador carregado tenha status ativo por padrão se ausente
+      staffMembers.forEach(m => {
+        if (!m.status) m.status = 'ativo';
+      });
+
+      renderStaffTable();
+      calculateStaffMetrics();
+    }
+
+    function renderStaffTable() {
+      const tbody = document.getElementById('staffTableBody');
+      tbody.innerHTML = '';
+
+      if (staffMembers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum colaborador cadastrado. Clique em "Novo Colaborador" para começar.</td></tr>`;
+        return;
+      }
+
+      staffMembers.forEach(m => {
+        const isAtivo = (m.status || 'ativo') === 'ativo';
+        let typeBadge = '';
+        if (String(m.role || '').toLowerCase().includes('entregador')) {
+          let cType = m.courierType || m.type || 'Próprio';
+          typeBadge = `<span class="badge-type">${cType}</span>`;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${m.name}</strong></td>
+          <td><span class="badge-role">${m.role}</span>${typeBadge}</td>
+          <td>${m.phone || m.telefone || '<span style="color:var(--text-muted);">-</span>'}</td>
+          <td>${m.commission ? m.commission + '%' : '0%'}</td>
+          <td><span class="badge-status ${isAtivo ? 'badge-active' : 'badge-inactive'}">${isAtivo ? 'ATIVO' : 'INATIVO'}</span></td>
+          <td>
+            <button class="btn-secondary" onclick="editStaff('${m.id}')">✏️ Editar</button>
+            <button class="btn-danger" onclick="confirmDeleteStaff('${m.id}')">🗑️ Excluir</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // METRICAS AUTOMÁTICAS
+    async function calculateStaffMetrics() {
+      document.getElementById('statTotalStaff').innerText = staffMembers.length;
+      const activeCount = staffMembers.filter(m => (m.status || 'ativo') === 'ativo').length;
+      document.getElementById('statActiveStaff').innerText = activeCount;
+
+      let salesHistory = [];
+      if (typeof dbFetchSales === 'function') {
+        salesHistory = await dbFetchSales();
+      } else {
+        const raw = localStorage.getItem('vortex_sales_history');
+        if (raw) salesHistory = JSON.parse(raw);
+      }
+
+      let totalSales = 0;
+      salesHistory.forEach(s => totalSales += parseFloat(s.total || 0));
+
+      document.getElementById('statStaffSales').innerText = `R$ ${totalSales.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      
+      let totalCommissions = 0;
+      if (staffMembers.length > 0 && totalSales > 0) {
+        staffMembers.forEach(m => {
+          if ((m.status || 'ativo') === 'ativo' && m.commission && parseFloat(m.commission) > 0) {
+            totalCommissions += totalSales * (parseFloat(m.commission) / 100);
+          }
+        });
+      }
+
+      document.getElementById('statStaffCommissions').innerText = `R$ ${totalCommissions.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    }
+
+    // MODAL DE ADIÇÃO/EDIÇÃO
+    function openStaffModal() {
+      document.getElementById('staffEditId').value = '';
+      document.getElementById('staffName').value = '';
+      document.getElementById('staffPhone').value = '';
+      document.getElementById('staffRole').value = 'Gerente';
+      document.getElementById('staffCourierType').value = 'Próprio';
+      document.getElementById('staffCommission').value = '';
+      document.getElementById('staffStatus').value = 'ativo';
+      toggleCourierTypeField();
+      document.getElementById('staffModalTitle').innerText = 'Cadastrar Colaborador';
+      document.getElementById('staffModal').classList.add('active');
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staffModal').classList.remove('active');
+    }
+
+    function editStaff(id) {
+      const member = staffMembers.find(m => String(m.id) === String(id));
+      if (!member) return;
+
+      document.getElementById('staffEditId').value = member.id;
+      document.getElementById('staffName').value = member.name;
+      document.getElementById('staffPhone').value = member.phone || member.telefone || '';
+      document.getElementById('staffRole').value = member.role;
+      document.getElementById('staffCourierType').value = member.courierType || member.type || 'Próprio';
+      document.getElementById('staffCommission').value = member.commission || '';
+      document.getElementById('staffStatus').value = member.status || 'ativo';
+      toggleCourierTypeField();
+      document.getElementById('staffModalTitle').innerText = 'Editar Colaborador';
+      document.getElementById('staffModal').classList.add('active');
+    }
+
+    async function saveStaffMember() {
+      const editId = document.getElementById('staffEditId').value;
+      const name = document.getElementById('staffName').value.trim();
+      const phone = document.getElementById('staffPhone').value.trim();
+      const role = document.getElementById('staffRole').value;
+      const courierType = role === 'Entregador' ? document.getElementById('staffCourierType').value : 'Próprio';
+      const commission = parseFloat(document.getElementById('staffCommission').value) || 0;
+      const status = document.getElementById('staffStatus').value;
+
+      if (!name) {
+        showCustomAlert('Campo Obrigatório', 'Informe o nome completo do colaborador.', '⚠️');
+        return;
+      }
+
+      const newRecord = {
+        id: editId || 'staff_' + Date.now(),
+        name, phone, role, courierType, type: courierType, commission, status
+      };
+
+      if (editId) {
+        const idx = staffMembers.findIndex(m => String(m.id) === String(editId));
+        if (idx !== -1) staffMembers[idx] = newRecord;
+      } else {
+        staffMembers.push(newRecord);
+      }
+
+      // Sincroniza com a tabela de entregadores do Módulo 21
+      syncCouriersStorage(staffMembers);
+
+      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+          await supabaseClient.from('vortex_staff').upsert([newRecord]);
+        } catch(e){}
+      }
+
+      localStorage.setItem('vortex_team_members', JSON.stringify(staffMembers));
+      renderStaffTable();
+      calculateStaffMetrics();
+      closeStaffModal();
+      showCustomAlert('Sucesso', 'Dados do colaborador salvos e sincronizados com a Logística!', '✅');
+    }
+
+    function confirmDeleteStaff(id) {
+      const member = staffMembers.find(m => String(m.id) === String(id));
+      const memberName = member ? member.name : 'este colaborador';
+
+      const buttonsHtml = `
+        <button class="btn-secondary" style="flex: 1;" onclick="closeCustomAlert()">Cancelar</button>
+        <button class="btn-danger" style="flex: 1;" onclick="executeDeleteStaff('${id}')">Excluir</button>
+      `;
+
+      showCustomAlert('Excluir Colaborador', `Deseja realmente remover "${memberName}" da equipe?`, '🗑️', buttonsHtml);
+    }
+
+    async function executeDeleteStaff(id) {
+      closeCustomAlert();
+      
+      // Localiza o colaborador antes de apagar para capturar o nome
+      const member = staffMembers.find(m => String(m.id) === String(id));
+      const memberName = member ? member.name.trim().toLowerCase() : '';
+
+      // Remove da equipe local
+      staffMembers = staffMembers.filter(m => String(m.id) !== String(id));
+
+      // REMOVE TAMBÉM DO MÓDULO DE ENTREGADORES (MÓDULO 21)
+      let couriers = JSON.parse(localStorage.getItem('vortex_couriers')) || [];
+      couriers = couriers.filter(c => c.name.trim().toLowerCase() !== memberName);
+      localStorage.setItem('vortex_couriers', JSON.stringify(couriers));
+
+      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+          await supabaseClient.from('vortex_staff').delete().eq('id', id);
+        } catch(e){}
+      }
+
+      localStorage.setItem('vortex_team_members', JSON.stringify(staffMembers));
+      renderStaffTable();
+      calculateStaffMetrics();
+      showCustomAlert('Removido', 'O colaborador foi removido com sucesso de todos os módulos.', '✅');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    window.onload = async function() {
+      applyTheme();
+      const settings = JSON.parse(localStorage.getItem('vortex_store_settings')) || { storeName: 'MEU ESTABELECIMENTO' };
+      document.getElementById('sidebarStoreName').innerText = settings.storeName || 'MEU ESTABELECIMENTO';
+      
+      await loadStaffData();
+    };
+  </script>
+</body>
+</html>

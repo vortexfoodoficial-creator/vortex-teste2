@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - Mesas & Comandas</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+    .qr-config-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+    .qr-config-info { flex: 1; min-width: 250px; }
+    .qr-config-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .qr-config-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+
+    .switch-container { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .switch-input { display: none; }
+    .switch-slider { width: 50px; height: 26px; background-color: var(--border); border-radius: 20px; position: relative; transition: background-color 0.3s; }
+    .switch-slider::before { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background-color: white; top: 3px; left: 3px; transition: transform 0.3s; }
+    .switch-input:checked + .switch-slider { background-color: var(--success); }
+    .switch-input:checked + .switch-slider::before { transform: translateX(24px); }
+
+    .mesas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .mesa-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 14px; padding: 16px; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+    .mesa-card.occupied { border-left: 5px solid var(--success); }
+    .mesa-card.free { border-left: 5px solid var(--text-muted); }
+
+    .mesa-header { display: flex; justify-content: space-between; align-items: center; }
+    .mesa-title { font-weight: bold; font-size: 1.1rem; }
+    .mesa-status { font-size: 0.78rem; font-weight: bold; padding: 3px 8px; border-radius: 12px; }
+    .status-free { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
+    .status-occupied { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+
+    .btn-mesa-action { background: var(--primary); color: white; border: none; padding: 9px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; width: 100%; transition: background 0.2s; }
+    .btn-mesa-action:hover { background: var(--primary-hover); }
+    .btn-qrcode { background: var(--border); color: var(--text-main); border: none; padding: 6px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; cursor: pointer; margin-top: 4px; width: 100%; }
+    .btn-qrcode.disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
+    input, select { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); width: 100%; padding: 9px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .menu-scroll-area { max-height: 160px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--bg-main); margin-bottom: 12px; }
+    .mini-menu-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; cursor: pointer; transition: all 0.2s; }
+    .mini-menu-card:hover { border-color: var(--primary); }
+    .mini-menu-title { font-size: 0.8rem; font-weight: bold; }
+    .mini-menu-price { font-size: 0.75rem; color: var(--success); font-weight: bold; }
+
+    .table-cart-list { max-height: 140px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .cart-item-row { background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+
+    .btn-delete-item { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+
+    .cash-change-box { display: none; background: rgba(15, 23, 42, 0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; margin-bottom: 8px; }
+    .cash-change-box.active { display: block; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 25px; width: 100%; max-width: 440px; }
+    .btn-modal-primary { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.9rem; }
+    .btn-modal-secondary { background: var(--border); color: var(--text-main); width: 100%; padding: 10px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.88rem; margin-top: 8px; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px 15px 80px 15px; }
+      .toggle-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link active"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>Mesas & Comandas</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <div class="qr-config-card">
+      <div class="qr-config-info">
+        <div class="qr-config-title">📱 Fechamento de Conta via QR Code da Mesa</div>
+        <div class="qr-config-desc">
+          Ative para permitir que o cliente possa ler o QR Code da mesa e solicitar o fechamento da conta pelo celular. Imprima gratuitamente a etiqueta exclusiva de cada mesa abaixo. Se desativado, apenas os atendentes poderão fechar comanda pelo painel.
+        </div>
+      </div>
+      <label class="switch-container">
+        <input type="checkbox" id="qrEnableToggle" class="switch-input" onchange="toggleQrFeature(this.checked)">
+        <span class="switch-slider"></span>
+        <span id="qrStatusText" style="font-size: 0.85rem; font-weight: bold;">Desativado</span>
+      </label>
+    </div>
+
+    <div class="card-box">
+      <div class="card-title">
+        <span>🍽️ Gestão do Atendimento de Mesas</span>
+        <div style="display:flex; gap:8px;">
+          <button onclick="addTable()" style="background:var(--success); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.8rem;">➕ Adicionar Mesa</button>
+          <button onclick="removeTable()" style="background:var(--danger); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.8rem;">➖ Remover Mesa</button>
+        </div>
+      </div>
+      <div class="mesas-grid" id="mesasGrid"></div>
+    </div>
+  </main>
+
+  <!-- MODAL DE ATENDIMENTO DE MESA -->
+  <div class="modal-overlay" id="mesaModal">
+    <div class="custom-modal-card">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="modalMesaTitle">Mesa 01</span>
+        <button onclick="closeMesaModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label for="tableClientNameInput">Nome do Cliente na Mesa (Opcional):</label>
+        <input type="text" id="tableClientNameInput" placeholder="Ex: Gabriel">
+      </div>
+
+      <div class="form-group">
+        <label>Selecione do Cardápio (Rolagem Independente):</label>
+        <div class="menu-scroll-area" id="tableMenuGrid"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Novos Itens Selecionados para Adicionar:</label>
+        <div class="table-cart-list" id="tableCartList">
+          <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item novo selecionado.</div>
+        </div>
+      </div>
+
+      <div class="form-group" id="alreadySentItemsBox" style="font-size:0.8rem; color:var(--text-muted); background:rgba(255,255,255,0.03); padding:8px; border-radius:6px; display:none;">
+        <strong>Já entregue / enviado anteriormente:</strong>
+        <div id="alreadySentItemsText" style="margin-top:2px;"></div>
+      </div>
+
+      <div class="form-group" style="margin-top:8px;">
+        <label for="tableObsInput">Observações do Pedido (Envio p/ Cozinha):</label>
+        <input type="text" id="tableObsInput" placeholder="Ex: Carne bem passada, sem cebola...">
+      </div>
+
+      <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:bold; margin:12px 0;">
+        <span>Total Acumulado da Mesa:</span>
+        <span id="tableTotalDisplay" style="color:var(--success);">R$ 0,00</span>
+      </div>
+
+      <button class="btn-modal-primary" onclick="submitTableOrderToKds()">Enviar Novos Itens p/ Cozinha 👨‍🍳</button>
+      <button class="btn-modal-primary" style="background:#2563eb; margin-top:8px;" onclick="openPaymentModal()">💳 Fechar Conta da Mesa</button>
+      <button class="btn-modal-secondary" onclick="closeMesaModal()">Manter Comanda Aberta</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE FECHAMENTO DE CONTA / PAGAMENTO -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="custom-modal-card">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:12px;">💳 Fechar Conta - <span id="payMesaTitle">Mesa</span></div>
+      
+      <div style="font-size:1.2rem; font-weight:bold; color:var(--success); margin-bottom:15px;" id="payTotalDisplay">Total: R$ 0,00</div>
+
+      <div class="form-group">
+        <label for="tablePaymentMethod">Forma de Pagamento:</label>
+        <select id="tablePaymentMethod" onchange="handlePaymentChange(this.value)">
+          <option value="Pix">Pix</option>
+          <option value="Cartão de Débito">Cartão de Débito</option>
+          <option value="Cartão de Crédito">Cartão de Crédito</option>
+          <option value="Vale Refeição - VR">Vale Refeição - VR</option>
+          <option value="Vale Alimentação - VA">Vale Alimentação - VA</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+      </div>
+
+      <div class="cash-change-box" id="tableCashChangeBox">
+        <label for="tableCashGiven">Dinheiro Recebido (Troco):</label>
+        <input type="text" id="tableCashGiven" placeholder="R$ 0,00" oninput="maskCurrencyInput(this)">
+        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.85rem; margin-top:6px;">
+          <span>Troco a Devolver:</span>
+          <span id="tableChangeDisplay">R$ 0,00</span>
+        </div>
+      </div>
+
+      <button class="btn-modal-primary" style="background:var(--success);" onclick="finalizeTablePayment()">Concluir Pagamento & Liberar Mesa ✅</button>
+      <button class="btn-modal-secondary" onclick="closePaymentModal()">Voltar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE QR CODE DA MESA -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="custom-modal-card" style="text-align:center;">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:12px;" id="qrModalTitle">📱 QR Code Exclusivo - Mesa 01</div>
+      <div style="background:white; padding:15px; border-radius:12px; display:inline-block; margin:10px 0;">
+        <img id="qrCodeImg" src="" alt="QR Code Mesa" style="width:160px; height:160px;">
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Imprima grátis e cole na mesa para autoatendimento e fechamento de conta.</div>
+      <button class="btn-modal-primary" onclick="printMesaQrCode()">🖨️ Imprimir Etiqueta da Mesa</button>
+      <button class="btn-modal-secondary" onclick="closeQrModal()">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOTIFICAÇÃO MODERNA -->
+  <div class="modal-overlay" id="noticeModal">
+    <div class="custom-modal-card" style="text-align:center;">
+      <div style="font-size:3rem; margin-bottom:12px;" id="noticeIcon">🎉</div>
+      <div style="font-size:1.25rem; font-weight:bold; margin-bottom:10px;" id="noticeTitle">Sucesso!</div>
+      <div style="font-size:0.88rem; color:var(--text-muted); margin-bottom:20px;" id="noticeDesc">Ação realizada.</div>
+      <button class="btn-modal-primary" onclick="closeNoticeModal()">Entendido</button>
+    </div>
+  </div>
+
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    let totalTablesCount = 10;
+    let activeTableId = null;
+    let tableCarts = {};
+    let tempCart = [];
+    let rawCashGiven = 0;
+    let isQrEnabled = false;
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    function loadStoreSettings() {
+      applyTheme();
+      let storeName = 'MEU ESTABELECIMENTO';
+      try {
+        const localSettings = JSON.parse(localStorage.getItem('vortex_store_settings')) || JSON.parse(localStorage.getItem('vortex_config')) || {};
+        storeName = localSettings.storeName || localSettings.store_name || localSettings.nome || localSettings.name || storeName;
+      } catch(e) {}
+      document.getElementById('sidebarStoreName').innerText = storeName;
+
+      const savedLogo = localStorage.getItem('vortex_store_logo');
+      const sidebarLogo = document.getElementById('sidebarStoreLogo');
+      if (savedLogo) {
+        sidebarLogo.src = savedLogo;
+        sidebarLogo.style.display = 'block';
+      } else {
+        sidebarLogo.style.display = 'none';
+      }
+
+      isQrEnabled = localStorage.getItem('vortex_qr_enabled') === 'true';
+      const toggle = document.getElementById('qrEnableToggle');
+      toggle.checked = isQrEnabled;
+      document.getElementById('qrStatusText').innerText = isQrEnabled ? 'Ativado' : 'Desativado';
+      document.getElementById('qrStatusText').style.color = isQrEnabled ? 'var(--success)' : 'var(--text-muted)';
+    }
+
+    function getCatalogProducts() {
+      const saved = localStorage.getItem('vortex_products_catalog');
+      if (saved) {
+        let products = JSON.parse(saved);
+        return products.filter(p => p.active !== false).map(p => ({
+          id: p.id,
+          name: p.name,
+          price: parseFloat(p.price) || 0,
+          category: p.category
+        }));
+      }
+      return [
+        { id: 1, name: 'X-Burger Especial', price: 28.50 },
+        { id: 2, name: 'X-Salada Duplo', price: 32.00 }
+      ];
+    }
+
+    function readLocalKdsOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem('vortex_kds_orders') || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function mergeKdsOrders(remoteOrders, localOrders) {
+      const byId = new Map();
+      (Array.isArray(remoteOrders) ? remoteOrders : []).forEach(o => { if (o && o.id != null) byId.set(String(o.id), o); });
+      (Array.isArray(localOrders) ? localOrders : []).forEach(o => { if (o && o.id != null) byId.set(String(o.id), o); });
+      return Array.from(byId.values());
+    }
+
+    async function saveTableKdsOrderToCloud(order) {
+      let client = null;
+      try {
+        if (typeof getSupabase === 'function') client = getSupabase();
+        if (!client && window.supabaseClient) client = window.supabaseClient;
+      } catch (e) {}
+      if (!client) return { data: null, error: new Error('Supabase não inicializado') };
+
+      const record = {
+        id: String(order.id),
+        origin: order.origin || 'Balcão',
+        client: order.client || 'Cliente Balcão',
+        address: order.address || '',
+        payment: order.payment || 'Dinheiro',
+        time: order.time || '',
+        date: order.date || new Date().toISOString().slice(0, 10),
+        items: Array.isArray(order.items) ? order.items : [],
+        total: Number(order.total) || 0,
+        observation: order.observation || '',
+        status: order.status || 'new',
+        code: order.code || String(order.id)
+      };
+      const { data, error } = await client.from('vortex_kds_orders').upsert([record]);
+      return { data, error };
+    }
+
+    function toggleQrFeature(enabled) {
+      isQrEnabled = enabled;
+      localStorage.setItem('vortex_qr_enabled', enabled ? 'true' : 'false');
+      document.getElementById('qrStatusText').innerText = enabled ? 'Ativado' : 'Desativado';
+      document.getElementById('qrStatusText').style.color = enabled ? 'var(--success)' : 'var(--text-muted)';
+      renderMesas();
+      showNoticeModal('Recurso Atualizado', enabled ? 'Autoatendimento e Fechamento via QR Code ATIVADOS!' : 'Fechamento via QR Code DESATIVADO pelo estabelecimento.', enabled ? '📱' : '🔒');
+    }
+
+    function renderMesas() {
+      loadStoreSettings();
+      totalTablesCount = parseInt(localStorage.getItem('vortex_total_tables')) || 10;
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+
+      const grid = document.getElementById('mesasGrid');
+      grid.innerHTML = '';
+
+      for (let i = 1; i <= totalTablesCount; i++) {
+        let tData = tableCarts[i];
+        let isOccupied = tData && tData.totalAccumulated && tData.totalAccumulated > 0;
+        let totalVal = isOccupied ? tData.totalAccumulated : 0;
+
+        grid.innerHTML += `
+          <div class="mesa-card ${isOccupied ? 'occupied' : 'free'}">
+            <div class="mesa-header">
+              <span class="mesa-title">Mesa ${i < 10 ? '0' + i : i}</span>
+              <span class="mesa-status ${isOccupied ? 'status-occupied' : 'status-free'}">
+                ${isOccupied ? '🟢 Ocupada' : '⚪ Livre'}
+              </span>
+            </div>
+
+            <div style="font-size:0.85rem; color:var(--text-muted);">
+              ${isOccupied ? `👤 ${tData.client || 'Cliente'}<br>💰 Consumo: <strong style="color:var(--success);">R$ ${totalVal.toFixed(2).replace('.', ',')}</strong>` : 'Sem consumo ativo.'}
+            </div>
+
+            <div>
+              <button class="btn-mesa-action" onclick="openMesaModal(${i})">
+                ${isOccupied ? '📋 Gerenciar Comanda' : '➕ Abrir Comanda'}
+              </button>
+              <button class="btn-qrcode ${!isQrEnabled ? 'disabled' : ''}" onclick="openQrModal(${i})">
+                ${isQrEnabled ? '📱 Ver QR Code da Mesa' : '🔒 QR Code Desativado'}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function addTable() {
+      totalTablesCount += 1;
+      localStorage.setItem('vortex_total_tables', totalTablesCount);
+      renderMesas();
+      showNoticeModal('Mesa Adicionada!', `Mesa ${totalTablesCount} criada com sucesso e sincronizada com o Dashboard.`, '➕');
+    }
+
+    function removeTable() {
+      if (totalTablesCount <= 1) {
+        showNoticeModal('Aviso', 'Você precisa ter pelo menos 1 mesa cadastrada.', '⚠️');
+        return;
+      }
+      totalTablesCount -= 1;
+      localStorage.setItem('vortex_total_tables', totalTablesCount);
+      renderMesas();
+      showNoticeModal('Mesa Removida!', `Mesa ${totalTablesCount + 1} removida do sistema e do Dashboard.`, '➖');
+    }
+
+    function openMesaModal(mesaNum) {
+      activeTableId = mesaNum;
+      document.getElementById('modalMesaTitle').innerText = `Mesa ${mesaNum < 10 ? '0' + mesaNum : mesaNum}`;
+
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+      let currentData = tableCarts[activeTableId] || { client: '', allItems: [], sentItems: [], totalAccumulated: 0, orderIds: [] };
+
+      document.getElementById('tableClientNameInput').value = currentData.client || '';
+      document.getElementById('tableObsInput').value = '';
+      
+      tempCart = [];
+
+      const sentBox = document.getElementById('alreadySentItemsBox');
+      const sentText = document.getElementById('alreadySentItemsText');
+      if (currentData.sentItems && currentData.sentItems.length > 0) {
+        sentBox.style.display = 'block';
+        sentText.innerHTML = currentData.sentItems.map(i => `${i.qty}x ${i.name} (R$ ${(i.price * i.qty).toFixed(2).replace('.', ',')})`).join(', ');
+      } else {
+        sentBox.style.display = 'none';
+        sentText.innerHTML = '';
+      }
+
+      renderTableCatalog();
+      renderTableCart();
+      document.getElementById('mesaModal').classList.add('active');
+    }
+
+    function closeMesaModal() {
+      activeTableId = null;
+      document.getElementById('mesaModal').classList.remove('active');
+    }
+
+    function renderTableCatalog() {
+      const grid = document.getElementById('tableMenuGrid');
+      grid.innerHTML = '';
+      const catalogProducts = getCatalogProducts();
+
+      if (catalogProducts.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">Nenhum produto disponível.</div>`;
+        return;
+      }
+
+      catalogProducts.forEach(p => {
+        grid.innerHTML += `
+          <div class="mini-menu-card" onclick="addToTempCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
+            <div class="mini-menu-title">${p.name}</div>
+            <div class="mini-menu-price">R$ ${p.price.toFixed(2).replace('.', ',')}</div>
+          </div>
+        `;
+      });
+    }
+
+    function addToTempCart(name, price) {
+      let existing = tempCart.find(i => i.name === name);
+      if (existing) existing.qty += 1;
+      else tempCart.push({ name, price, qty: 1 });
+      renderTableCart();
+    }
+
+    function removeFromTempCart(idx) {
+      tempCart.splice(idx, 1);
+      renderTableCart();
+    }
+
+    function renderTableCart() {
+      const list = document.getElementById('tableCartList');
+      const totalDisplay = document.getElementById('tableTotalDisplay');
+
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+      let currentData = tableCarts[activeTableId] || { totalAccumulated: 0 };
+
+      let tempTotal = tempCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      let alreadySentTotal = currentData.sentItems ? currentData.sentItems.reduce((acc, i) => acc + (i.price * i.qty), 0) : 0;
+      let grandTotal = alreadySentTotal + tempTotal;
+
+      if (tempCart.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item novo selecionado.</div>`;
+      } else {
+        let html = '';
+        tempCart.forEach((item, idx) => {
+          html += `
+            <div class="cart-item-row">
+              <span><strong>${item.qty}x</strong> ${item.name}</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}</span>
+                <button class="btn-delete-item" onclick="removeFromTempCart(${idx})" title="Remover Item">🗑️</button>
+              </div>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      }
+
+      totalDisplay.innerText = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+    }
+
+    function getLocalDateStr(dateObj) {
+      const d = dateObj || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    async function submitTableOrderToKds() {
+      if (tempCart.length === 0) {
+        showNoticeModal('Nenhum Item Novo', 'Selecione novos itens do cardápio para enviar para a cozinha.', '⚠️');
+        return;
+      }
+
+      const clientName = document.getElementById('tableClientNameInput').value.trim() || `Mesa ${activeTableId}`;
+      const observation = document.getElementById('tableObsInput').value.trim();
+      const incrementalTotal = tempCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
+      const now = new Date();
+      const dateStr = getLocalDateStr(now);
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      let localOrders = readLocalKdsOrders();
+      let currentData = tableCarts[activeTableId] || { sentItems: [], orderIds: [] };
+
+      const todayOrders = localOrders.filter(o => (o.date || '').split('T')[0] === dateStr && !isNaN(parseInt(o.id, 10)));
+      const nextSeqNumber = todayOrders.length > 0 ? Math.max(...todayOrders.map(o => parseInt(o.id, 10))) + 1 : 1;
+      const newOrderId = String(nextSeqNumber);
+
+      let targetOrder = {
+        id: newOrderId,
+        origin: `Mesa ${activeTableId < 10 ? '0' + activeTableId : activeTableId}`,
+        client: clientName,
+        address: 'Consumo Local',
+        payment: 'Comanda de Mesa',
+        payMethod: 'Comanda de Mesa',
+        observation: observation,
+        items: [...tempCart],
+        total: incrementalTotal,
+        status: 'new',
+        date: dateStr,
+        dateFormatted: now.toLocaleDateString('pt-BR'),
+        time: timeStr,
+        code: newOrderId
+      };
+
+      localOrders.unshift(targetOrder);
+
+      if (!currentData.orderIds) currentData.orderIds = [];
+      currentData.orderIds.push(newOrderId);
+
+      let combinedSentItems = [...(currentData.sentItems || [])];
+      tempCart.forEach(newItem => {
+        let existing = combinedSentItems.find(i => i.name === newItem.name);
+        if (existing) {
+          existing.qty += newItem.qty;
+        } else {
+          combinedSentItems.push({ ...newItem });
+        }
+      });
+
+      let accumulatedTotal = combinedSentItems.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
+      tableCarts[activeTableId] = {
+        client: clientName,
+        sentItems: combinedSentItems,
+        totalAccumulated: accumulatedTotal,
+        orderIds: currentData.orderIds
+      };
+
+      localStorage.setItem('vortex_table_carts', JSON.stringify(tableCarts));
+      localStorage.setItem('vortex_kds_orders', JSON.stringify(localOrders));
+
+      closeMesaModal();
+      renderMesas();
+      showNoticeModal('Pedido Adicional Enviado!', `Novo lote de pedidos #${newOrderId} enviado para a Cozinha com sucesso!`, '👨‍🍳');
+
+      try {
+        await saveTableKdsOrderToCloud(targetOrder);
+      } catch (err) {
+        console.error('Erro ao salvar KDS mesa no Supabase:', err);
+      }
+    }
+
+    function openPaymentModal() {
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+      let currentData = tableCarts[activeTableId];
+
+      if (!currentData || !currentData.sentItems || currentData.sentItems.length === 0) {
+        showNoticeModal('Sem Consumo', 'Não há itens na comanda para fechar conta.', '⚠️');
+        return;
+      }
+
+      const total = currentData.totalAccumulated;
+      document.getElementById('payMesaTitle').innerText = `Mesa ${activeTableId < 10 ? '0' + activeTableId : activeTableId}`;
+      document.getElementById('payTotalDisplay').innerText = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+
+      document.getElementById('tableCashGiven').value = '';
+      rawCashGiven = 0;
+      handlePaymentChange(document.getElementById('tablePaymentMethod').value);
+
+      document.getElementById('paymentModal').classList.add('active');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').classList.remove('active');
+    }
+
+    function handlePaymentChange(val) {
+      const box = document.getElementById('tableCashChangeBox');
+      if (val === 'Dinheiro') box.classList.add('active');
+      else box.classList.remove('active');
+      calculateTableChange();
+    }
+
+    function maskCurrencyInput(input) {
+      let value = input.value.replace(/\D/g, '');
+      if (!value) {
+        input.value = 'R$ 0,00';
+        rawCashGiven = 0;
+        calculateTableChange();
+        return;
+      }
+      const numeric = parseFloat(value) / 100;
+      rawCashGiven = numeric;
+      input.value = 'R$ ' + numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      calculateTableChange();
+    }
+
+    function calculateTableChange() {
+      const payment = document.getElementById('tablePaymentMethod').value;
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+      let currentData = tableCarts[activeTableId] || { totalAccumulated: 0 };
+      const total = currentData.totalAccumulated;
+      const display = document.getElementById('tableChangeDisplay');
+
+      if (payment !== 'Dinheiro') {
+        display.innerText = 'R$ 0,00';
+        display.style.color = 'var(--text-main)';
+        return;
+      }
+
+      if (rawCashGiven >= total && total > 0) {
+        const change = rawCashGiven - total;
+        display.innerText = `R$ ${change.toFixed(2).replace('.', ',')}`;
+        display.style.color = 'var(--success)';
+      } else if (rawCashGiven > 0) {
+        display.innerText = 'Falta dinheiro';
+        display.style.color = 'var(--danger)';
+      } else {
+        display.innerText = 'R$ 0,00';
+        display.style.color = 'var(--text-main)';
+      }
+    }
+
+    async function finalizeTablePayment() {
+      tableCarts = JSON.parse(localStorage.getItem('vortex_table_carts')) || {};
+      let currentData = tableCarts[activeTableId];
+      if (!currentData) return;
+
+      const total = currentData.totalAccumulated;
+      const payment = document.getElementById('tablePaymentMethod').value;
+
+      if (payment === 'Dinheiro' && rawCashGiven < total) {
+        showNoticeModal('Valor Insuficiente', 'O valor em dinheiro informado é menor que o total.', '⚠️');
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = getLocalDateStr(now);
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      const primaryOrderId = currentData.orderIds && currentData.orderIds.length > 0 ? currentData.orderIds[0] : '1';
+
+      let changeVal = 0;
+      if (payment === 'Dinheiro' && rawCashGiven > total) {
+        changeVal = rawCashGiven - total;
+      }
+
+      let currentSalesRaw = localStorage.getItem('vortex_vendas_hoje') || '0,00';
+      let cleanedSalesStr = currentSalesRaw.replace(/\./g, '').replace(',', '.');
+      let currentSales = parseFloat(cleanedSalesStr) || 0;
+      currentSales += total;
+      localStorage.setItem('vortex_vendas_hoje', currentSales.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+      let salesHistory = JSON.parse(localStorage.getItem('vortex_sales_history')) || [];
+      const newSaleRecord = {
+        id: primaryOrderId,
+        client: document.getElementById('tableClientNameInput').value.trim() || `Mesa ${activeTableId}`,
+        channel: `Mesa ${activeTableId}`,
+        total: total,
+        subtotal: total,
+        discount: 0,
+        pay_method: payment,
+        amountPaid: payment === 'Dinheiro' ? rawCashGiven : total,
+        changeValue: changeVal,
+        status: 'finished',
+        date: dateStr,
+        time: timeStr,
+        items: currentData.sentItems
+      };
+      salesHistory.unshift(newSaleRecord);
+      localStorage.setItem('vortex_sales_history', JSON.stringify(salesHistory));
+
+      try {
+        if (typeof dbSaveSale === 'function') {
+          await dbSaveSale(newSaleRecord);
+        } else if (window.supabaseClient) {
+          await window.supabaseClient.from('vortex_sales_history').upsert([newSaleRecord]);
+        }
+      } catch (err) {
+        console.error('Erro ao salvar venda da mesa no Supabase:', err);
+      }
+
+      let kdsOrders = readLocalKdsOrders();
+      kdsOrders.forEach(o => {
+        if (currentData.orderIds && currentData.orderIds.includes(String(o.id))) {
+          o.status = 'finished';
+          o.payMethod = payment;
+          o.amountPaid = payment === 'Dinheiro' ? rawCashGiven : total;
+          o.changeValue = changeVal;
+        }
+      });
+      localStorage.setItem('vortex_kds_orders', JSON.stringify(kdsOrders));
+
+      try {
+        let client = null;
+        if (typeof getSupabase === 'function') client = getSupabase();
+        if (!client && window.supabaseClient) client = window.supabaseClient;
+        if (client) {
+          for (let id of (currentData.orderIds || [])) {
+            await client.from('vortex_kds_orders').update({ status: 'finished' }).eq('id', String(id));
+          }
+        }
+      } catch (err) {}
+
+      delete tableCarts[activeTableId];
+      localStorage.setItem('vortex_table_carts', JSON.stringify(tableCarts));
+
+      closePaymentModal();
+      closeMesaModal();
+      renderMesas();
+
+      showNoticeModal('Conta Fechada!', `A Mesa ${activeTableId} foi paga, sincronizada na nuvem e liberada com sucesso!`, '✅');
+    }
+
+    function openQrModal(mesaNum) {
+      if (!isQrEnabled) {
+        showNoticeModal('Recurso Desativado', 'Ative a chave de fechamento via QR Code no topo da página para visualizar e imprimir as etiquetas.', '🔒');
+        return;
+      }
+      document.getElementById('qrModalTitle').innerText = `📱 QR Code Exclusivo - Mesa ${mesaNum < 10 ? '0' + mesaNum : mesaNum}`;
+      document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://vortexfoodoficial-creator.github.io/vortex/cardapio.html?mesa=${mesaNum}`;
+      document.getElementById('qrModal').classList.add('active');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qrModal').classList.remove('active');
+    }
+
+    function printMesaQrCode() {
+      const imgUrl = document.getElementById('qrCodeImg').src;
+      const title = document.getElementById('qrModalTitle').innerText;
+      const printWin = window.open('', '_blank', 'width=380,height=500');
+      printWin.document.write(`
+        <html>
+          <head><title>Etiqueta QR Code Mesa</title></head>
+          <body style="font-family:sans-serif; text-align:center; padding:20px;">
+            <h2>VORTEX FOOD</h2>
+            <h3>${title}</h3>
+            <img src="${imgUrl}" style="width:200px; height:200px; margin:15px 0;"><br>
+            <p>Acesse o cardápio e solicite a conta pelo celular!</p>
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
+
+    function showNoticeModal(title, desc, icon) {
+      document.getElementById('noticeIcon').innerText = icon || '🎉';
+      document.getElementById('noticeTitle').innerText = title;
+      document.getElementById('noticeDesc').innerHTML = desc;
+      document.getElementById('noticeModal').classList.add('active');
+    }
+
+    function closeNoticeModal() {
+      document.getElementById('noticeModal').classList.remove('active');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    window.onload = function() {
+      renderMesas();
+    };
+  </script>
+</body>
+</html>

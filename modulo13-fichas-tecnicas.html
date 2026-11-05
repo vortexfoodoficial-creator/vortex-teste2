@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - Fichas Técnicas & CMV</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    .stats-summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-badge { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-size: 0.85rem; font-weight: bold; flex: 1; min-width: 200px; }
+
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .search-filter-bar { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.88rem; }
+
+    .recipe-scroll-container { max-height: 580px; overflow-y: auto; padding-right: 4px; }
+    .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    
+    .recipe-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+    .recipe-card-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed var(--border); padding-bottom: 10px; }
+    .recipe-title { font-weight: bold; font-size: 1.05rem; color: var(--primary); }
+    .recipe-category { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+
+    .ingredients-list-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+    .ingredient-row { display: flex; justify-content: space-between; font-size: 0.82rem; border-bottom: 1px dotted var(--border); padding-bottom: 4px; }
+    .ingredient-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .cmv-metrics-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+    .cmv-metric-item { display: flex; flex-direction: column; }
+    .cmv-label { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; }
+    .cmv-val { font-size: 0.9rem; font-weight: bold; }
+
+    .btn-action-recipe { width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary); color: white; transition: opacity 0.2s; }
+    .btn-action-recipe:hover { opacity: 0.9; }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
+    input[type="text"], input[type="number"], select, textarea { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); width: 100%; padding: 9px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 10px; overflow-y: auto; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; margin: auto; }
+    .btn-modal-primary { background: var(--primary); color: white; width: 100%; padding: 11px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.88rem; }
+    .btn-modal-secondary { background: var(--border); color: var(--text-main); width: 100%; padding: 9px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; margin-top: 6px; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 12px 12px 70px 12px; }
+      .toggle-btn { display: block; }
+      .cmv-metrics-row { grid-template-columns: 1fr; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link active"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>Fichas Técnicas & Engenharia de Cardápio (CMV)</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <div class="stats-summary-bar">
+      <div class="stat-badge">
+        <span style="font-size:1.4rem;">📖</span>
+        <div>
+          <div style="font-size:0.7rem; color:var(--text-muted);">FICHAS CADASTRADAS</div>
+          <div style="font-size:1rem;" id="statTotalRecipes">0</div>
+        </div>
+      </div>
+      <div class="stat-badge">
+        <span style="font-size:1.4rem;">📊</span>
+        <div>
+          <div style="font-size:0.7rem; color:var(--text-muted);">CMV MÉDIO DO CARDÁPIO</div>
+          <div style="font-size:1rem; color:var(--info);" id="statAvgCmv">0.0%</div>
+        </div>
+      </div>
+      <div class="stat-badge">
+        <span style="font-size:1.4rem;">💡</span>
+        <div>
+          <div style="font-size:0.7rem; color:var(--text-muted);">LUCRO BRUTO MÉDIO</div>
+          <div style="font-size:1rem; color:var(--success);">
+            <span id="statAvgMarginValue">R$ 0,00</span> 
+            <span id="statAvgMarginPercent" style="font-size:0.75rem; font-weight:normal;">(0.0%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-box">
+      <div class="card-title">
+        <span>📖 Produtos & Composição de Insumos</span>
+        <button class="btn-action-recipe" style="width:auto; padding:8px 14px;" onclick="openRecipeModal()">➕ Nova Ficha Técnica</button>
+      </div>
+
+      <div class="search-filter-bar">
+        <input type="text" id="recipeSearchInput" class="search-input" placeholder="🔍 Buscar ficha técnica por nome do produto..." oninput="renderRecipes()">
+      </div>
+
+      <div class="recipe-scroll-container">
+        <div class="recipe-grid" id="recipesContainer"></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="recipeModal">
+    <div class="custom-modal-card">
+      <div style="font-size:1.05rem; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="recipeModalTitle">Montar Ficha Técnica</span>
+        <button onclick="closeRecipeModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
+
+      <input type="hidden" id="editRecipeId">
+
+      <div class="form-group">
+        <label for="recipeProductSelect">Selecione o Produto do Cardápio *:</label>
+        <select id="recipeProductSelect" onchange="updateProductPriceDisplay()"></select>
+      </div>
+
+      <div style="background:var(--bg-main); border:1px solid var(--border); padding:10px; border-radius:10px; margin-bottom:12px;">
+        <label style="color:var(--primary); font-weight:bold; margin-bottom:8px;">Adicionar Insumos do Estoque:</label>
+        
+        <div class="form-group">
+          <label for="ingredientStockSelect">Insumo do Estoque:</label>
+          <select id="ingredientStockSelect"></select>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;">
+            <label for="ingredientQty">Qtd Usada:</label>
+            <input type="number" step="0.001" id="ingredientQty" placeholder="Ex: 0.150">
+          </div>
+          <div style="flex:1;">
+            <label for="ingredientUnit">Unidade:</label>
+            <select id="ingredientUnit">
+              <option value="kg">KG</option>
+              <option value="g">G (Gramas)</option>
+              <option value="l">L (Litros)</option>
+              <option value="ml">ML (Mililitros)</option>
+              <option value="un">UN (Unidade)</option>
+              <option value="pct">Pacote (pct)</option>
+              <option value="cx">Caixa (cx)</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn-modal-primary" style="padding:9px 12px;" onclick="addIngredientToDraft()">+ Add</button>
+          </div>
+        </div>
+
+        <div id="draftIngredientsList" style="margin-top:10px; display:flex; flex-direction:column; gap:4px; max-height:140px; overflow-y:auto;"></div>
+      </div>
+
+      <div class="cmv-metrics-row" style="margin-bottom:12px;">
+        <div class="cmv-metric-item">
+          <span class="cmv-label">CUSTO TOTAL (CMV)</span>
+          <span class="cmv-val" id="draftCostDisplay" style="color:var(--danger);">R$ 0,00</span>
+        </div>
+        <div class="cmv-metric-item">
+          <span class="cmv-label">PREÇO DE VENDA</span>
+          <span class="cmv-val" id="draftPriceDisplay" style="color:var(--info);">R$ 0,00</span>
+        </div>
+        <div class="cmv-metric-item">
+          <span class="cmv-label">MARGEM / LUCRO</span>
+          <span class="cmv-val" id="draftMarginDisplay" style="color:var(--success);">R$ 0,00 (0.0%)</span>
+        </div>
+      </div>
+
+      <button class="btn-modal-primary" onclick="saveRecipe()">Salvar Ficha Técnica 💾</button>
+      <button class="btn-modal-secondary" onclick="closeRecipeModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="noticeModal">
+    <div class="custom-modal-card" style="text-align:center; max-width: 380px;">
+      <div style="font-size:2.5rem; margin-bottom:8px;" id="noticeIcon">🎉</div>
+      <div style="font-size:1.1rem; font-weight:bold; margin-bottom:8px;" id="noticeTitle">Sucesso!</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:15px;" id="noticeDesc">Ação concluída.</div>
+      <button class="btn-modal-primary" onclick="closeNoticeModal()">Entendido</button>
+    </div>
+  </div>
+
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    let draftIngredients = [];
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    function loadStoreSettings() {
+      applyTheme();
+      const settings = JSON.parse(localStorage.getItem('vortex_store_settings')) || { storeName: 'MEU ESTABELECIMENTO' };
+      document.getElementById('sidebarStoreName').innerText = settings.storeName || 'MEU ESTABELECIMENTO';
+      const savedLogo = localStorage.getItem('vortex_store_logo');
+      const sidebarLogo = document.getElementById('sidebarStoreLogo');
+      if (savedLogo) { sidebarLogo.src = savedLogo; sidebarLogo.style.display = 'block'; }
+    }
+
+    function getInsumos() {
+      let saved = localStorage.getItem('vortex_stock_items');
+      if (!saved) return [];
+      let items = JSON.parse(saved);
+      return items.map(i => ({
+        id: i.id,
+        name: i.name,
+        unit: i.unit,
+        cost: parseFloat(i.cost || 0)
+      }));
+    }
+
+    function getProducts() {
+      let saved = localStorage.getItem('vortex_products_catalog') || localStorage.getItem('vortex_cardapio_produtos');
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    function getRecipes() {
+      let saved = localStorage.getItem('vortex_recipes_catalog');
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    async function syncRecipesToCloud() {
+      try {
+        if (window.supabaseClient) {
+          await window.supabaseClient.from('vortex_recipes_catalog').upsert(getRecipes());
+        } else if (typeof dbSaveRecipes === 'function') {
+          await dbSaveRecipes(getRecipes());
+        }
+      } catch (e) {
+        console.error('Erro ao sincronizar fichas técnicas no Supabase:', e);
+      }
+    }
+
+    async function renderRecipes() {
+      loadStoreSettings();
+
+      try {
+        if (window.supabaseClient) {
+          const { data, error } = await window.supabaseClient.from('vortex_recipes_catalog').select('*');
+          if (data && data.length > 0) {
+            localStorage.setItem('vortex_recipes_catalog', JSON.stringify(data));
+          }
+        } else if (typeof dbFetchRecipes === 'function') {
+          const cloudRecipes = await dbFetchRecipes();
+          if (cloudRecipes && cloudRecipes.length > 0) {
+            localStorage.setItem('vortex_recipes_catalog', JSON.stringify(cloudRecipes));
+          }
+        }
+      } catch (e) {}
+
+      let recipes = getRecipes();
+      let products = getProducts();
+      let insumos = getInsumos();
+
+      const search = document.getElementById('recipeSearchInput').value.toLowerCase().trim();
+      const container = document.getElementById('recipesContainer');
+      container.innerHTML = '';
+
+      let totalCmvPercent = 0;
+      let totalMarginSum = 0;
+      let totalMarginPercentSum = 0;
+      let validCount = 0;
+
+      let filteredRecipes = recipes.filter(r => r.productName.toLowerCase().includes(search));
+
+      if (filteredRecipes.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px; font-weight: bold;">Nenhuma ficha técnica cadastrada. Clique em "Nova Ficha Técnica" para criar.</div>`;
+      } else {
+        filteredRecipes.forEach(r => {
+          let p = products.find(prod => String(prod.id) === String(r.productId));
+          let sellPrice = p ? parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0) : (r.sellPrice || 0);
+
+          let calculatedCost = 0;
+          let itemsHtml = r.ingredients.map(ing => {
+            let insumoObj = insumos.find(i => String(i.id) === String(ing.insumoId) || i.name === ing.name);
+            let unitCost = insumoObj ? parseFloat(insumoObj.cost) : (ing.unitCost || 0);
+            
+            let itemCost = 0;
+            if (ing.unit === 'g' || ing.unit === 'ml') itemCost = (ing.qty / 1000) * unitCost;
+            else itemCost = ing.qty * unitCost;
+
+            calculatedCost += itemCost;
+
+            return `
+              <div class="ingredient-row">
+                <span>${ing.qty} ${ing.unit} - ${ing.name}</span>
+                <strong>R$ ${itemCost.toFixed(2).replace('.', ',')}</strong>
+              </div>
+            `;
+          }).join('');
+
+          let profitMargin = sellPrice - calculatedCost;
+          let profitMarginPercent = sellPrice > 0 ? (profitMargin / sellPrice) * 100 : 0;
+          let cmvPercent = sellPrice > 0 ? (calculatedCost / sellPrice) * 100 : 0;
+
+          if (sellPrice > 0) {
+            totalCmvPercent += cmvPercent;
+            totalMarginSum += profitMargin;
+            totalMarginPercentSum += profitMarginPercent;
+            validCount++;
+          }
+
+          container.innerHTML += `
+            <div class="recipe-card">
+              <div>
+                <div class="recipe-card-header">
+                  <div>
+                    <div class="recipe-title">${r.productName}</div>
+                    <div class="recipe-category">Preço Venda: R$ ${sellPrice.toFixed(2).replace('.', ',')}</div>
+                  </div>
+                  <button onclick="deleteRecipe('${r.id}')" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;" title="Excluir Ficha">🗑️</button>
+                </div>
+
+                <div style="font-size:0.78rem; font-weight:bold; margin:10px 0 4px; color:var(--text-muted);">INGREDIENTES:</div>
+                <div class="ingredients-list-box">${itemsHtml}</div>
+              </div>
+
+              <div class="cmv-metrics-row">
+                <div class="cmv-metric-item">
+                  <span class="cmv-label">CUSTO (CMV)</span>
+                  <span class="cmv-val" style="color:var(--danger);">R$ ${calculatedCost.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div class="cmv-metric-item">
+                  <span class="cmv-label">CMV (%)</span>
+                  <span class="cmv-val" style="color:var(--warning);">${cmvPercent.toFixed(1)}%</span>
+                </div>
+                <div class="cmv-metric-item">
+                  <span class="cmv-label">MARGEM / LUCRO</span>
+                  <span class="cmv-val" style="color:var(--success);">R$ ${profitMargin.toFixed(2).replace('.', ',')} <span style="font-size:0.7rem; font-weight:normal;">(${profitMarginPercent.toFixed(1)}%)</span></span>
+                </div>
+              </div>
+
+              <button class="btn-action-recipe" onclick="editRecipe('${r.id}')">✏️ Editar Ficha Técnica</button>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('statTotalRecipes').innerText = recipes.length;
+      document.getElementById('statAvgCmv').innerText = validCount > 0 ? (totalCmvPercent / validCount).toFixed(1) + '%' : '0.0%';
+      document.getElementById('statAvgMarginValue').innerText = validCount > 0 ? 'R$ ' + (totalMarginSum / validCount).toFixed(2).replace('.', ',') : 'R$ 0,00';
+      document.getElementById('statAvgMarginPercent').innerText = validCount > 0 ? `(${(totalMarginPercentSum / validCount).toFixed(1)}%)` : '(0.0%)';
+    }
+
+    function openRecipeModal() {
+      document.getElementById('editRecipeId').value = '';
+      document.getElementById('recipeModalTitle').innerText = 'Montar Ficha Técnica';
+      draftIngredients = [];
+      
+      let products = getProducts();
+      let insumos = getInsumos();
+
+      const prodSelect = document.getElementById('recipeProductSelect');
+      prodSelect.innerHTML = '';
+      if (products.length === 0) {
+        prodSelect.innerHTML = `<option value="">Nenhum produto cadastrado no cardápio</option>`;
+      } else {
+        products.forEach(p => {
+          let price = parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0);
+          prodSelect.innerHTML += `<option value="${p.id}">${p.name} (R$ ${price.toFixed(2).replace('.', ',')})</option>`;
+        });
+      }
+
+      const insumoSelect = document.getElementById('ingredientStockSelect');
+      insumoSelect.innerHTML = '';
+      if (insumos.length === 0) {
+        insumoSelect.innerHTML = `<option value="">Nenhum item cadastrado no estoque</option>`;
+      } else {
+        insumos.forEach(i => {
+          insumoSelect.innerHTML += `<option value="${i.id}">${i.name} (Custo: R$ ${parseFloat(i.cost).toFixed(2).replace('.', ',')} / ${i.unit})</option>`;
+        });
+      }
+
+      renderDraftIngredients();
+      updateProductPriceDisplay();
+      document.getElementById('recipeModal').classList.add('active');
+    }
+
+    function closeRecipeModal() {
+      document.getElementById('recipeModal').classList.remove('active');
+    }
+
+    function addIngredientToDraft() {
+      const insumoId = document.getElementById('ingredientStockSelect').value;
+      const qty = parseFloat(document.getElementById('ingredientQty').value) || 0;
+      const unit = document.getElementById('ingredientUnit').value;
+
+      if (!insumoId || qty <= 0) {
+        showNoticeModal('Atenção', 'Selecione um insumo e informe uma quantidade maior que zero.', '⚠️');
+        return;
+      }
+
+      let insumos = getInsumos();
+      let insumoObj = insumos.find(i => String(i.id) === String(insumoId));
+      if (!insumoObj) return;
+
+      draftIngredients.push({
+        insumoId: insumoObj.id,
+        name: insumoObj.name,
+        qty: qty,
+        unit: unit,
+        unitCost: parseFloat(insumoObj.cost) || 0
+      });
+
+      document.getElementById('ingredientQty').value = '';
+      renderDraftIngredients();
+    }
+
+    function renderDraftIngredients() {
+      const container = document.getElementById('draftIngredientsList');
+      container.innerHTML = '';
+
+      let totalDraftCost = 0;
+      draftIngredients.forEach((ing, idx) => {
+        let itemCost = 0;
+        if (ing.unit === 'g' || ing.unit === 'ml') itemCost = (ing.qty / 1000) * ing.unitCost;
+        else itemCost = ing.qty * ing.unitCost;
+
+        totalDraftCost += itemCost;
+
+        container.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:4px 8px; border-radius:6px; font-size:0.78rem;">
+            <span>${ing.qty} ${ing.unit} - ${ing.name}</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <strong style="color:var(--danger);">R$ ${itemCost.toFixed(2).replace('.', ',')}</strong>
+              <button onclick="draftIngredients.splice(${idx}, 1); renderDraftIngredients();" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold;">✕</button>
+            </div>
+          </div>
+        `;
+      });
+
+      let products = getProducts();
+      let selectedProdId = document.getElementById('recipeProductSelect').value;
+      let p = products.find(prod => String(prod.id) === String(selectedProdId));
+      let sellPrice = p ? parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0) : 0;
+      let margin = sellPrice - totalDraftCost;
+      let marginPercent = sellPrice > 0 ? (margin / sellPrice) * 100 : 0;
+
+      document.getElementById('draftCostDisplay').innerText = `R$ ${totalDraftCost.toFixed(2).replace('.', ',')}`;
+      document.getElementById('draftPriceDisplay').innerText = `R$ ${sellPrice.toFixed(2).replace('.', ',')}`;
+      document.getElementById('draftMarginDisplay').innerText = `R$ ${margin.toFixed(2).replace('.', ',')} (${marginPercent.toFixed(1)}%)`;
+    }
+
+    function updateProductPriceDisplay() {
+      renderDraftIngredients();
+    }
+
+    async function saveRecipe() {
+      const rawProdId = document.getElementById('recipeProductSelect').value;
+      const productId = isNaN(rawProdId) ? rawProdId : parseInt(rawProdId);
+
+      if (!productId || draftIngredients.length === 0) {
+        showNoticeModal('Atenção', 'Selecione o produto e adicione pelo menos um insumo.', '⚠️');
+        return;
+      }
+
+      let products = getProducts();
+      let p = products.find(prod => String(prod.id) === String(productId));
+      if (!p) return;
+
+      let recipes = getRecipes();
+      const id = document.getElementById('editRecipeId').value;
+
+      let totalCalculatedCost = 0;
+      let insumos = getInsumos();
+      draftIngredients.forEach(ing => {
+        let insumoObj = insumos.find(i => String(i.id) === String(ing.insumoId) || i.name === ing.name);
+        let unitCost = insumoObj ? parseFloat(insumoObj.cost) : (ing.unitCost || 0);
+        if (ing.unit === 'g' || ing.unit === 'ml') totalCalculatedCost += (ing.qty / 1000) * unitCost;
+        else totalCalculatedCost += ing.qty * unitCost;
+      });
+
+      // GARANTIA TOTAL DE SINCRONIZAÇÃO: Atualiza todas as chaves de custo possíveis no produto
+      p.cost = totalCalculatedCost;
+      p.costPrice = totalCalculatedCost;
+      p.custo = totalCalculatedCost;
+      p.totalCost = totalCalculatedCost;
+      p.unitCost = totalCalculatedCost;
+
+      // Salva o cardápio atualizado localmente e na nuvem
+      localStorage.setItem('vortex_products_catalog', JSON.stringify(products));
+      localStorage.setItem('vortex_cardapio_produtos', JSON.stringify(products));
+      
+      try {
+        if (window.supabaseClient) {
+          await window.supabaseClient.from('vortex_cardapio_produtos').upsert([p]);
+        }
+      } catch (err) {
+        console.warn('Erro ao atualizar custo do produto na nuvem:', err);
+      }
+
+      const recipeData = {
+        productId: p.id,
+        productName: p.name,
+        sellPrice: parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0),
+        totalCost: totalCalculatedCost,
+        cost: totalCalculatedCost,
+        ingredients: [...draftIngredients]
+      };
+
+      if (id) {
+        let r = recipes.find(item => String(item.id) === String(id));
+        if (r) Object.assign(r, recipeData);
+      } else {
+        recipeData.id = 'rec_' + Date.now();
+        recipes.push(recipeData);
+      }
+
+      localStorage.setItem('vortex_recipes_catalog', JSON.stringify(recipes));
+      await syncRecipesToCloud();
+      
+      closeRecipeModal();
+      renderRecipes();
+      showNoticeModal('Ficha Técnica Salva!', 'Ficha atualizada e Custo Base sincronizado perfeitamente com Relatórios e DRE!', '📖');
+    }
+
+    function editRecipe(id) {
+      let recipes = getRecipes();
+      let r = recipes.find(item => String(item.id) === String(id));
+      if (!r) return;
+
+      openRecipeModal();
+      document.getElementById('editRecipeId').value = r.id;
+      document.getElementById('recipeModalTitle').innerText = 'Editar Ficha Técnica';
+      document.getElementById('recipeProductSelect').value = r.productId;
+      draftIngredients = [...r.ingredients];
+      renderDraftIngredients();
+    }
+
+    async function deleteRecipe(id) {
+      let recipes = getRecipes();
+      recipes = recipes.filter(r => String(r.id) !== String(id));
+      localStorage.setItem('vortex_recipes_catalog', JSON.stringify(recipes));
+      await syncRecipesToCloud();
+      renderRecipes();
+      showNoticeModal('Removido', 'Ficha técnica excluída.', '🗑️');
+    }
+
+    function showNoticeModal(title, desc, icon) {
+      document.getElementById('noticeIcon').innerText = icon || '🎉';
+      document.getElementById('noticeTitle').innerText = title;
+      document.getElementById('noticeDesc').innerText = desc;
+      document.getElementById('noticeModal').classList.add('active');
+    }
+
+    function closeNoticeModal() {
+      document.getElementById('noticeModal').classList.remove('active');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    window.onload = function() {
+      renderRecipes();
+    };
+  </script>
+</body>
+</html>

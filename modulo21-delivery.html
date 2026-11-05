@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - Delivery & Logística Inteligente</title>
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    .delivery-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
+    input, select { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); width: 100%; padding: 9px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .menu-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 180px; overflow-y: auto; margin-bottom: 12px; padding-right: 4px; }
+    .mini-menu-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; transition: all 0.2s; }
+    .mini-menu-card:hover { border-color: var(--primary); }
+    .mini-menu-title { font-size: 0.8rem; font-weight: bold; }
+    .mini-menu-price { font-size: 0.75rem; color: var(--success); font-weight: bold; }
+
+    .delivery-cart-list { max-height: 120px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .cart-item-row { background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+
+    .cash-change-box { display: none; background: rgba(15, 23, 42, 0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; margin-bottom: 8px; }
+    .cash-change-box.active { display: block; }
+    .change-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.85rem; margin-top: 6px; }
+
+    .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+    .btn-submit:hover { background: var(--primary-hover); }
+
+    .btn-secondary { background: var(--border); color: var(--text-main); border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem; }
+    .btn-secondary:hover { background: #475569; }
+
+    .delivery-orders-list { display: flex; flex-direction: column; gap: 12px; max-height: 540px; overflow-y: auto; }
+    .order-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 6px; }
+    .order-id { font-weight: bold; color: var(--primary); }
+    
+    .order-status { font-size: 0.75rem; font-weight: bold; padding: 4px 10px; border-radius: 12px; }
+    .status-new { background: rgba(56, 189, 248, 0.15); color: var(--info); border: 1px solid var(--info); }
+    .status-preparing { background: rgba(234, 179, 8, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .status-ready { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .status-route { background: rgba(249, 115, 22, 0.15); color: var(--primary); border: 1px solid var(--primary); }
+    .status-finished { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .action-btn-delivery { width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; margin-top: 6px; transition: opacity 0.2s; }
+    .btn-dispatch { background: var(--primary); color: white; }
+    .btn-deliver { background: var(--success); color: white; }
+    .btn-print-ticket { background: var(--border); color: var(--text-main); margin-top: 6px; width: 100%; padding: 8px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+    .btn-print-ticket:hover { background: #475569; }
+
+    .code-input-row { display: flex; gap: 6px; margin-top: 6px; }
+    .code-input { flex: 1; text-align: center; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; padding: 8px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 480px; text-align: left; max-height: 90vh; overflow-y: auto; }
+    .btn-modal-primary { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; margin-top: 15px; text-align: center; }
+
+    .suggestion-item-row { background: var(--bg-main); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+    @media (max-width: 900px) {
+      .delivery-grid { grid-template-columns: 1fr; }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px 15px 80px 15px; }
+      .toggle-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link active"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>Delivery & Logística Inteligente</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <div class="card-box">
+      <div class="card-title">
+        <span>🛵 Gestão de Entregadores & Roteirização Automática</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="openCourierHistoryModal()">📋 Histórico Entregas</button>
+          <button class="btn-secondary" onclick="openCourierModal()">➕ Cadastrar Entregador</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+        <div style="flex: 1; min-width: 220px;">
+          <label for="selectCourierForRoute">Selecione o Motoboy da Vez:</label>
+          <select id="selectCourierForRoute" class="form-input">
+            <option value="">Nenhum entregador cadastrado</option>
+          </select>
+        </div>
+        <div style="align-self: flex-end;">
+          <button class="btn-action" style="background:var(--success); color:#fff; padding:10px 16px; border-radius:8px; border:none; font-weight:bold; cursor:pointer;" onclick="runSmartRouteOptimization()">🚀 Sugerir Rotas Otimizadas</button>
+        </div>
+      </div>
+      <div id="couriersListSummary" style="font-size: 0.85rem; color: var(--text-muted);">Nenhum entregador ativo no momento.</div>
+    </div>
+
+    <div class="delivery-grid">
+      <div class="card-box">
+        <div class="card-title">🛵 Lançar Pedido para Entrega</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="clientNameInput">Nome do Cliente *:</label>
+            <input type="text" id="clientNameInput" placeholder="Ex: Gabriel Gustavo">
+          </div>
+          <div class="form-group">
+            <label for="clientPhoneInput">Telefone / WhatsApp *:</label>
+            <input type="text" id="clientPhoneInput" placeholder="(00) 00000-0000" maxlength="15" oninput="handlePhoneInput(this)" onkeydown="handlePhoneKeyDown(event, this)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cepInput">CEP (Busca Automática):</label>
+            <input type="text" id="cepInput" placeholder="00000-000" maxlength="9" oninput="maskAndSearchCep(this)" onkeydown="handleCepKeyDown(event, this)">
+          </div>
+          <div class="form-group">
+            <label for="streetNumberInput">Número da Residência *:</label>
+            <input type="text" id="streetNumberInput" placeholder="Ex: 142">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="streetInput">Rua / Logradouro (Automático):</label>
+          <input type="text" id="streetInput" placeholder="Aguardando CEP...">
+        </div>
+
+        <div class="form-group">
+          <label for="neighborhoodInput">Bairro (Automático - Usado na Rota):</label>
+          <input type="text" id="neighborhoodInput" placeholder="Aguardando CEP...">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cityInput">Cidade (Automático):</label>
+            <input type="text" id="cityInput" placeholder="Ex: São Paulo">
+          </div>
+          <div class="form-group">
+            <label for="stateInput">Estado (UF - Automático):</label>
+            <input type="text" id="stateInput" placeholder="Ex: SP">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="complementInput">Complemento (Ex: Ap 42, Bloco B):</label>
+          <input type="text" id="complementInput" placeholder="Ex: Ap 42, Bloco B / Casa nos fundos">
+        </div>
+
+        <div class="form-group">
+          <label for="refInput">Ponto de Referência (Opcional):</label>
+          <input type="text" id="refInput" placeholder="Ex: Próximo à praça central">
+        </div>
+
+        <div class="form-group">
+          <label>Adicionar Itens do Cardápio:</label>
+          <div class="menu-select-grid" id="menuSelectGrid"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Itens do Pedido:</label>
+          <div class="delivery-cart-list" id="deliveryCartList">
+            <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item selecionado.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="deliveryObsInput">Observações do Pedido (Envio p/ Cozinha):</label>
+          <input type="text" id="deliveryObsInput" placeholder="Ex: Sem maionese, carne bem passada...">
+        </div>
+
+        <div class="form-group">
+          <label for="paymentMethodSelect">Forma de Pagamento:</label>
+          <select id="paymentMethodSelect" onchange="handlePaymentChange(this.value)">
+            <option value="Pix">Pix</option>
+            <option value="Cartão de Débito (Maquininha)">Cartão de Débito (Maquininha)</option>
+            <option value="Cartão de Crédito (Maquininha)">Cartão de Crédito (Maquininha)</option>
+            <option value="Vale Refeição - VR (Maquininha)">Vale Refeição - VR (Maquininha)</option>
+            <option value="Vale Alimentação - VA (Maquininha)">Vale Alimentação - VA (Maquininha)</option>
+            <option value="Dinheiro">Dinheiro</option>
+          </select>
+        </div>
+
+        <div class="cash-change-box" id="cashChangeBox">
+          <label for="cashGivenInput">Troco para quanto?</label>
+          <input type="text" id="cashGivenInput" placeholder="R$ 0,00" oninput="maskCurrencyInput(this)">
+          <div class="change-row">
+            <span>Troco a Enviar:</span>
+            <span id="calculatedChangeDisplay">R$ 0,00</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:bold; margin:12px 0;">
+          <span>Total + Entrega:</span>
+          <span id="deliveryTotalDisplay" style="color:var(--success);">R$ 0,00</span>
+        </div>
+
+        <button class="btn-submit" onclick="submitDeliveryOrder()">Enviar Pedido p/ Cozinha 🛵</button>
+      </div>
+
+      <div class="card-box">
+        <div class="card-title">📦 Pedidos em Andamento & Entregas</div>
+        <div class="delivery-orders-list" id="deliveryOrdersList"></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="smartRouteModal">
+    <div class="custom-modal-card" style="max-width: 600px;">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:5px; color:var(--primary);" id="smartRouteModalTitle">🚀 Sugestão de Rotas</div>
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;" id="smartRouteSubtitle">Pedidos prontos ordenados da menor distância até a mais longe, partindo do estabelecimento.</div>
+      
+      <div id="smartRouteListContainer" style="max-height: 380px; overflow-y: auto; margin-bottom: 15px;"></div>
+
+      <button class="btn-secondary" style="width:100%; text-align:center;" onclick="closeSmartRouteModal()">Fechar Janela</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editCourierModal">
+    <div class="custom-modal-card" style="max-width: 400px; text-align:left;">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:15px;">✏️ Alterar Motoboy da Rota</div>
+      <input type="hidden" id="editCourierOrderId" value="">
+      
+      <div class="form-group">
+        <label>Selecionar Novo Motoboy:</label>
+        <select id="modalEditCourierSelect" class="form-input">
+          <option value="">Nenhum (Deixar sem motoboy)</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeEditCourierModal()">Cancelar</button>
+        <button class="btn-modal-primary" style="flex:1; margin:0; background:var(--success);" onclick="saveOrderCourierChange()">Salvar Alteração</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="courierHistoryModal">
+    <div class="custom-modal-card" style="max-width: 600px;">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:15px;">📋 Histórico de Entregas por Motoboy</div>
+      <div id="courierHistoryContent" style="max-height: 380px; overflow-y: auto; font-size: 0.85rem; margin-bottom: 15px;">
+        <div style="color:var(--text-muted); text-align:center; padding:15px;">Nenhum histórico registrado ainda.</div>
+      </div>
+      <button class="btn-secondary" style="width:100%; text-align:center;" onclick="closeCourierHistoryModal()">Fechar</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="courierModal">
+    <div class="custom-modal-card">
+      <div style="font-size:1.2rem; font-weight:bold; margin-bottom:15px;" id="courierModalTitle">👤 Cadastrar Entregador</div>
+      <input type="hidden" id="courierEditId" value="">
+      <div class="form-group" style="text-align:left;">
+        <label>Nome do Entregador *:</label>
+        <input type="text" id="courierNameInput" placeholder="Ex: Carlos Moto">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>Telefone / WhatsApp *:</label>
+        <input type="text" id="courierPhoneInput" placeholder="(00) 00000-0000" maxlength="15" oninput="handlePhoneInput(this)" onkeydown="handlePhoneKeyDown(event, this)">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>Tipo de Vínculo:</label>
+        <select id="courierTypeSelect">
+          <option value="Próprio">Entregador Próprio</option>
+          <option value="Terceirizado">Entregador Terceirizado / Aplicativo</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeCourierModal()">Cancelar</button>
+        <button class="btn-modal-primary" style="flex:1; margin:0;" onclick="saveCourier()">Salvar Entregador</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmDeleteCourierModal">
+    <div class="custom-modal-card" style="max-width: 380px; text-align:center;">
+      <div style="font-size:3rem; margin-bottom:12px;">🗑️</div>
+      <div style="font-size:1.25rem; font-weight:bold; margin-bottom:10px;">Excluir Entregador?</div>
+      <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Deseja realmente remover este entregador do sistema?</div>
+      <input type="hidden" id="deleteCourierTargetId" value="">
+      <div style="display:flex; gap:10px;">
+        <button class="btn-secondary" style="flex:1;" onclick="closeConfirmDeleteCourierModal()">Cancelar</button>
+        <button class="btn-modal-primary" style="flex:1; margin:0; background:var(--danger);" onclick="executeDeleteCourier()">Sim, Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="noticeModal">
+    <div class="custom-modal-card" style="max-width: 380px; text-align:center;">
+      <div style="font-size:3rem; margin-bottom:12px;" id="noticeIcon">🎉</div>
+      <div style="font-size:1.25rem; font-weight:bold; margin-bottom:10px;" id="noticeTitle">Sucesso!</div>
+      <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;" id="noticeDesc">Pedido enviado.</div>
+      <button class="btn-modal-primary" onclick="closeNoticeModal()" style="margin:0;">Entendido</button>
+    </div>
+  </div>
+
+  <script>
+    let deliveryCart = [];
+    let rawCashGiven = 0;
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    function loadStoreSettings() {
+      applyTheme();
+      let storeName = 'MEU ESTABELECIMENTO';
+      try {
+        const localSettings = JSON.parse(localStorage.getItem('vortex_store_settings')) || JSON.parse(localStorage.getItem('vortex_config')) || {};
+        storeName = localSettings.storeName || localSettings.store_name || localSettings.nome || localSettings.name || storeName;
+      } catch(e) {}
+      document.getElementById('sidebarStoreName').innerText = storeName;
+
+      const savedLogo = localStorage.getItem('vortex_store_logo');
+      const sidebarLogo = document.getElementById('sidebarStoreLogo');
+      if (savedLogo) {
+        sidebarLogo.src = savedLogo;
+        sidebarLogo.style.display = 'block';
+      } else {
+        sidebarLogo.style.display = 'none';
+      }
+      loadCouriers();
+    }
+
+    async function getCatalogProducts() {
+      let rawProducts = [];
+      try {
+        if (typeof dbFetchProducts === 'function') {
+          rawProducts = await dbFetchProducts();
+        } else if (typeof dbFetchCatalog === 'function') {
+          const result = await dbFetchCatalog();
+          rawProducts = Array.isArray(result) ? result : (result && Array.isArray(result.products) ? result.products : []);
+        }
+      } catch (e) {}
+
+      if (!Array.isArray(rawProducts) || rawProducts.length === 0) {
+        try {
+          const saved = localStorage.getItem('vortex_products_catalog') || localStorage.getItem('vortex_cardapio_produtos');
+          if (saved) rawProducts = JSON.parse(saved);
+        } catch (e) {
+          rawProducts = [];
+        }
+      }
+
+      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+        return rawProducts.filter(p => p && p.active !== false).map(p => ({
+          id: p.id,
+          name: String(p.name || p.nome || 'Produto'),
+          price: parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0),
+          category: p.category || p.categoria || 'Geral'
+        }));
+      }
+
+      return [
+        { id: 1, name: 'X-Burger Especial', price: 28.50 },
+        { id: 2, name: 'X-Salada Duplo', price: 32.00 }
+      ];
+    }
+
+    function getUnifiedCouriers() {
+      let couriers = JSON.parse(localStorage.getItem('vortex_couriers')) || [];
+      let team = JSON.parse(localStorage.getItem('vortex_team_members')) || [];
+      
+      let teamCouriers = team.filter(m => (m.status || 'ativo') === 'ativo' && ((m.role && m.role.toLowerCase().includes('entregador')) || (m.cargo && m.cargo.toLowerCase().includes('motoboy')) || (m.type && m.type.toLowerCase().includes('entregador'))));
+      
+      let map = new Map();
+      couriers.forEach(c => map.set(c.name.trim().toLowerCase(), c));
+      teamCouriers.forEach(t => {
+        if (!map.has(t.name.trim().toLowerCase())) {
+          map.set(t.name.trim().toLowerCase(), {
+            id: t.id || 'cour_' + Date.now(),
+            name: t.name,
+            phone: t.phone || t.telefone || '',
+            type: t.courierType || t.type || 'Próprio'
+          });
+        }
+      });
+
+      return Array.from(map.values());
+    }
+
+    function saveUnifiedCouriers(couriersList) {
+      localStorage.setItem('vortex_couriers', JSON.stringify(couriersList));
+      
+      let team = JSON.parse(localStorage.getItem('vortex_team_members')) || [];
+      couriersList.forEach(c => {
+        let found = team.find(t => String(t.name).trim().toLowerCase() === String(c.name).trim().toLowerCase());
+        if (found) {
+          found.phone = c.phone;
+          found.role = 'Entregador';
+          found.courierType = c.type;
+          found.type = c.type;
+          found.status = 'ativo';
+        } else {
+          team.push({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            role: 'Entregador',
+            courierType: c.type,
+            type: c.type,
+            status: 'ativo'
+          });
+        }
+      });
+      localStorage.setItem('vortex_team_members', JSON.stringify(team));
+    }
+
+    function openCourierModal(courierId = null) {
+      document.getElementById('courierEditId').value = '';
+      document.getElementById('courierNameInput').value = '';
+      document.getElementById('courierPhoneInput').value = '';
+      document.getElementById('courierTypeSelect').value = 'Próprio';
+
+      if (courierId) {
+        let couriers = getUnifiedCouriers();
+        const found = couriers.find(c => String(c.id) === String(courierId));
+        if (found) {
+          document.getElementById('courierEditId').value = found.id;
+          document.getElementById('courierNameInput').value = found.name || '';
+          document.getElementById('courierPhoneInput').value = found.phone || '';
+          document.getElementById('courierTypeSelect').value = found.type || 'Próprio';
+          document.getElementById('courierModalTitle').innerText = '✏️ Editar Entregador';
+        }
+      } else {
+        document.getElementById('courierModalTitle').innerText = '👤 Cadastrar Entregador';
+      }
+
+      document.getElementById('courierModal').classList.add('active');
+    }
+
+    function closeCourierModal() {
+      document.getElementById('courierModal').classList.remove('active');
+    }
+
+    function saveCourier() {
+      const editId = document.getElementById('courierEditId').value;
+      const name = document.getElementById('courierNameInput').value.trim();
+      const phone = document.getElementById('courierPhoneInput').value.trim();
+      const type = document.getElementById('courierTypeSelect').value;
+
+      if (!name || !phone) {
+        showNoticeModal('Campos Obrigatórios', 'Informe o nome e o telefone do entregador.', '⚠️');
+        return;
+      }
+
+      let couriers = getUnifiedCouriers();
+
+      if (editId) {
+        let index = couriers.findIndex(c => String(c.id) === String(editId));
+        if (index !== -1) {
+          couriers[index].name = name;
+          couriers[index].phone = phone;
+          couriers[index].type = type;
+        }
+      } else {
+        couriers.push({ id: 'cour_' + Date.now(), name, phone, type, status: 'disponivel' });
+      }
+
+      saveUnifiedCouriers(couriers);
+
+      closeCourierModal();
+      loadCouriers();
+      showNoticeModal('Sucesso', editId ? `Entregador ${name} atualizado com sucesso!` : `Entregador ${name} cadastrado com sucesso e sincronizado com a Equipe!`, '✅');
+    }
+
+    function deleteCourier(courierId) {
+      document.getElementById('deleteCourierTargetId').value = courierId;
+      document.getElementById('confirmDeleteCourierModal').classList.add('active');
+    }
+
+    function closeConfirmDeleteCourierModal() {
+      document.getElementById('confirmDeleteCourierModal').classList.remove('active');
+    }
+
+    function executeDeleteCourier() {
+      const courierId = document.getElementById('deleteCourierTargetId').value;
+      
+      let couriers = getUnifiedCouriers();
+      const courierToRemove = couriers.find(c => String(c.id) === String(courierId));
+      const courierName = courierToRemove ? courierToRemove.name.trim().toLowerCase() : '';
+
+      couriers = couriers.filter(c => String(c.id) !== String(courierId));
+      localStorage.setItem('vortex_couriers', JSON.stringify(couriers));
+
+      let team = JSON.parse(localStorage.getItem('vortex_team_members')) || [];
+      team = team.filter(t => t.name.trim().toLowerCase() !== courierName);
+      localStorage.setItem('vortex_team_members', JSON.stringify(team));
+
+      closeConfirmDeleteCourierModal();
+      loadCouriers();
+      showNoticeModal('Entregador Excluído', 'O entregador foi removido com sucesso de todos os módulos.', '🗑️');
+    }
+
+    function loadCouriers() {
+      let couriers = getUnifiedCouriers();
+      const select = document.getElementById('selectCourierForRoute');
+      const editSelect = document.getElementById('modalEditCourierSelect');
+      const summary = document.getElementById('couriersListSummary');
+      
+      select.innerHTML = '<option value="">Selecione o motoboy...</option>';
+      editSelect.innerHTML = '<option value="">Nenhum (Deixar sem motoboy)</option>';
+
+      if (couriers.length === 0) {
+        select.innerHTML = `<option value="">Nenhum entregador cadastrado</option>`;
+        summary.innerHTML = `Nenhum entregador cadastrado. Clique em "Cadastrar Entregador".`;
+        return;
+      }
+
+      let summaryHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+      couriers.forEach(c => {
+        select.innerHTML += `<option value="${c.name}">${c.name} (${c.type})</option>`;
+        editSelect.innerHTML += `<option value="${c.name}">${c.name} (${c.type})</option>`;
+        summaryHtml += `
+          <div style="background:var(--bg-main); padding:8px 12px; border-radius:8px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span>🛵 <strong>${c.name}</strong> [${c.phone}] - <span style="color:var(--primary);">${c.type}</span></span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="openCourierModal('${c.id}')">✏️ Editar</button>
+              <button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem; background:var(--danger); color:#fff;" onclick="deleteCourier('${c.id}')">🗑️ Excluir</button>
+            </div>
+          </div>
+        `;
+      });
+      summaryHtml += '</div>';
+      summary.innerHTML = summaryHtml;
+    }
+
+    function handlePhoneKeyDown(e, input) {
+      if (e.key === 'Backspace') {
+        let v = input.value;
+        if (v.endsWith('-') || v.endsWith(' ') || v.endsWith(')')) {
+          e.preventDefault();
+          let digits = v.replace(/\D/g, '').slice(0, -1);
+          formatAndSetPhone(input, digits);
+        }
+      }
+    }
+
+    function handlePhoneInput(input) {
+      let digits = input.value.replace(/\D/g, '');
+      formatAndSetPhone(input, digits);
+    }
+
+    function formatAndSetPhone(input, digits) {
+      if (digits.length > 11) digits = digits.slice(0, 11);
+      if (digits.length === 0) input.value = '';
+      else if (digits.length <= 2) input.value = `(${digits}`;
+      else if (digits.length <= 6) input.value = `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+      else if (digits.length <= 10) input.value = `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+      else input.value = `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    }
+
+    function handleCepKeyDown(e, input) {
+      if (e.key === 'Backspace') {
+        let v = input.value;
+        if (v.endsWith('-')) {
+          e.preventDefault();
+          let digits = v.replace(/\D/g, '').slice(0, -1);
+          formatAndSetCep(input, digits);
+        }
+      }
+    }
+
+    function maskAndSearchCep(input) {
+      let digits = input.value.replace(/\D/g, '');
+      formatAndSetCep(input, digits);
+    }
+
+    function formatAndSetCep(input, digits) {
+      if (digits.length > 8) digits = digits.slice(0, 8);
+
+      let formatted = digits;
+      if (digits.length > 5) {
+        formatted = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      }
+      input.value = formatted;
+
+      if (digits.length === 8) {
+        fetch(`https://viacep.com.br/ws/${digits}/json/`)
+          .then(res => res.json())
+          .then(data => {
+            if (!data.erro) {
+              document.getElementById('streetInput').value = data.logradouro || '';
+              document.getElementById('neighborhoodInput').value = data.bairro || '';
+              document.getElementById('cityInput').value = data.localidade || '';
+              document.getElementById('stateInput').value = data.uf || '';
+              document.getElementById('streetNumberInput').focus();
+            }
+          })
+          .catch(() => {});
+      }
+    }
+
+    async function runSmartRouteOptimization() {
+      const selectedCourier = document.getElementById('selectCourierForRoute').value;
+      if (!selectedCourier) {
+        showNoticeModal('Selecione o Entregador', 'Escolha um motoboy na lista para ver as sugestões de rotas.', '⚠️');
+        return;
+      }
+
+      let storeAddress = '';
+      const storeSettings = JSON.parse(localStorage.getItem('vortex_store_settings')) || {};
+      const vortexConfig = JSON.parse(localStorage.getItem('vortex_config')) || {};
+      
+      storeAddress = storeSettings.storeAddress || storeSettings.address || storeSettings.endereco || 
+                     vortexConfig.endereco || vortexConfig.store_address || vortexConfig.address ||
+                     localStorage.getItem('vortex_store_address') || localStorage.getItem('vortex_endereco') || '';
+
+      if (!storeAddress || storeAddress.trim() === '') {
+        showNoticeModal(
+          'Endereço do Estabelecimento Não Encontrado', 
+          'Não é possível otimizar as rotas pois o <strong>endereço do estabelecimento</strong> não foi cadastrado nas Configurações.', 
+          '⚠️'
+        );
+        return;
+      }
+
+      let kdsOrders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      let readyOrders = kdsOrders.filter(o => o.origin && o.origin.includes('Delivery') && o.status === 'ready');
+
+      if (readyOrders.length === 0) {
+        showNoticeModal('Nenhum Pedido Pronto', 'Não há pedidos prontos na cozinha para roteirizar no momento.', '⚠️');
+        return;
+      }
+
+      function extractMetrics(addrStr) {
+        if (!addrStr) return { cepNum: 0, houseNum: 0 };
+        let cepMatch = addrStr.match(/CEP:\s*(\d{5})-?(\d{3})/i) || addrStr.match(/(\d{5}-\d{3})/);
+        let cepVal = cepMatch ? parseInt(cepMatch[0].replace(/\D/g, '')) || 0 : 0;
+        let numMatch = addrStr.match(/N[º°]?\s*(\d+)/i) || addrStr.match(/,\s*(\d+)/);
+        let houseVal = numMatch ? parseInt(numMatch[1]) : 0;
+        return { cepNum: cepVal, houseNum: houseVal };
+      }
+
+      let storeMetrics = extractMetrics(storeAddress);
+      let unassigned = [...readyOrders];
+      let optimizedRoute = [];
+      let currentRefCep = storeMetrics.cepNum || 7000000;
+      let currentRefHouse = storeMetrics.houseNum || 1;
+
+      while (unassigned.length > 0) {
+        let nearestIndex = 0;
+        let minScore = Infinity;
+
+        unassigned.forEach((ord, idx) => {
+          let m = extractMetrics(ord.address);
+          let score = (Math.abs(m.cepNum - currentRefCep) * 1000) + Math.abs(m.houseNum - currentRefHouse);
+          if (score < minScore) {
+            minScore = score;
+            nearestIndex = idx;
+          }
+        });
+
+        let nextOrder = unassigned.splice(nearestIndex, 1)[0];
+        optimizedRoute.push(nextOrder);
+        let nextMetrics = extractMetrics(nextOrder.address);
+        currentRefCep = nextMetrics.cepNum || currentRefCep;
+        currentRefHouse = nextMetrics.houseNum || currentRefHouse;
+      }
+
+      document.getElementById('smartRouteModalTitle').innerText = `🚀 Sugestão de Rotas para: ${selectedCourier}`;
+      document.getElementById('smartRouteSubtitle').innerHTML = `Partida do Estabelecimento: <strong>${storeAddress}</strong>`;
+
+      const container = document.getElementById('smartRouteListContainer');
+      container.innerHTML = '';
+
+      optimizedRoute.forEach((o, index) => {
+        let isAssigned = o.courier && o.courier.trim() !== '';
+        let actionBtnHtml = isAssigned ? 
+          `<button class="btn-secondary" style="font-size:0.7rem; padding:3px 8px; background:var(--danger); color:#fff;" onclick="assignOrderToCourier('${o.id}', '')">Desvincular ❌</button>` :
+          `<button class="btn-action" style="background:var(--success); color:#fff; padding:6px 12px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; font-size:0.8rem;" onclick="assignOrderToCourier('${o.id}', '${selectedCourier}')">Atribuir Motoboy ✅</button>`;
+
+        const visibleNum = o.displayId || o.id;
+        container.innerHTML += `
+          <div class="suggestion-item-row">
+            <div style="font-size:0.85rem; flex:1;">
+              <strong style="color:var(--primary);">#${visibleNum}</strong> (Parada ${index + 1}) - ${o.client} <br>
+              <span style="color:var(--text-muted);">🕒 Horário: ${o.time || '--:--'}</span><br>
+              📍 <strong>Endereço:</strong> ${o.address}
+            </div>
+            <div>${actionBtnHtml}</div>
+          </div>
+        `;
+      });
+
+      document.getElementById('smartRouteModal').classList.add('active');
+    }
+
+    function closeSmartRouteModal() {
+      document.getElementById('smartRouteModal').classList.remove('active');
+    }
+
+    async function assignOrderToCourier(orderId, courierName) {
+      const kdsOrders = readLocalKdsOrders();
+      const order = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!order) return;
+      order.courier = courierName;
+      saveLocalKdsOrders(kdsOrders);
+      renderActiveDeliveryOrders(kdsOrders, true);
+      runSmartRouteOptimization();
+      const visibleNum = order.displayId || orderId;
+      if (courierName) showNoticeModal('Motoboy Atribuído!', `O pedido #${visibleNum} foi vinculado a ${courierName}.`, '🛵');
+      else showNoticeModal('Entrega Desvinculada', `O pedido #${visibleNum} foi desvinculado.`, 'ℹ️');
+      await syncKdsPatch(orderId, { courier: courierName || '' });
+    }
+
+    function openEditCourierModal(orderId) {
+      document.getElementById('editCourierOrderId').value = orderId;
+      let kdsOrders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      const o = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (o) {
+        document.getElementById('modalEditCourierSelect').value = o.courier || '';
+      }
+      document.getElementById('editCourierModal').classList.add('active');
+    }
+
+    function closeEditCourierModal() {
+      document.getElementById('editCourierModal').classList.remove('active');
+    }
+
+    async function saveOrderCourierChange() {
+      const orderId = document.getElementById('editCourierOrderId').value;
+      const newCourier = document.getElementById('modalEditCourierSelect').value;
+      const kdsOrders = readLocalKdsOrders();
+      const order = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!order) return;
+      order.courier = newCourier;
+      saveLocalKdsOrders(kdsOrders);
+      closeEditCourierModal();
+      renderActiveDeliveryOrders(kdsOrders, true);
+      const visibleNum = order.displayId || orderId;
+      showNoticeModal('Motoboy Atualizado', newCourier ? `O motoboy do pedido #${visibleNum} foi alterado para ${newCourier}.` : `O motoboy foi removido.`, '✅');
+      await syncKdsPatch(orderId, { courier: newCourier || '' });
+    }
+
+    function recordCourierHistory(o) {
+      if (!o.courier) return;
+      let history = JSON.parse(localStorage.getItem('vortex_courier_history')) || [];
+      let routeStatusText = o.status === 'finished' ? 'Entregue / Concluído ✅' : 'Em Rota de Entrega 🛵';
+
+      const visibleNum = o.displayId || o.id;
+      const historyItem = {
+        id: 'hist_' + Date.now(),
+        orderId: visibleNum,
+        client: o.client,
+        courier: o.courier,
+        address: o.address,
+        status: routeStatusText,
+        timeAssigned: new Date().toLocaleTimeString('pt-BR'),
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      let existingIndex = history.findIndex(h => String(h.orderId) === String(visibleNum));
+      if (existingIndex !== -1) history[existingIndex] = historyItem;
+      else history.unshift(historyItem);
+
+      localStorage.setItem('vortex_courier_history', JSON.stringify(history));
+    }
+
+    function openCourierHistoryModal() {
+      let history = JSON.parse(localStorage.getItem('vortex_courier_history')) || [];
+      const content = document.getElementById('courierHistoryContent');
+      content.innerHTML = '';
+
+      if (history.length === 0) {
+        content.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:15px;">Nenhum histórico registrado.</div>`;
+      } else {
+        history.forEach(h => {
+          content.innerHTML += `
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+              🛵 <strong>Motoboy:</strong> ${h.courier} | <strong>Pedido:</strong> #${h.orderId}<br>
+              📊 <strong>Status:</strong> <span style="color:var(--primary); font-weight:bold;">${h.status}</span><br>
+              👤 <strong>Cliente:</strong> ${h.client}<br>
+              📍 <strong>Destino:</strong> ${h.address}<br>
+              🕒 <strong>Horário:</strong> ${h.timeAssigned} (${h.date})
+            </div>
+          `;
+        });
+      }
+      document.getElementById('courierHistoryModal').classList.add('active');
+    }
+
+    function closeCourierHistoryModal() {
+      document.getElementById('courierHistoryModal').classList.remove('active');
+    }
+
+    async function renderCatalog() {
+      const grid = document.getElementById('menuSelectGrid');
+      grid.innerHTML = '';
+      const catalogProducts = await getCatalogProducts();
+
+      if (catalogProducts.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">Nenhum produto disponível.</div>`;
+        return;
+      }
+
+      catalogProducts.forEach(p => {
+        grid.innerHTML += `
+          <div class="mini-menu-card" onclick="addToDeliveryCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
+            <div class="mini-menu-title">${p.name}</div>
+            <div class="mini-menu-price">R$ ${p.price.toFixed(2).replace('.', ',')}</div>
+          </div>
+        `;
+      });
+    }
+
+    function addToDeliveryCart(name, price) {
+      const existing = deliveryCart.find(i => i.name === name);
+      if (existing) existing.qty += 1;
+      else deliveryCart.push({ name, price, qty: 1 });
+      renderDeliveryCart();
+    }
+
+    function changeCartQty(idx, delta) {
+      deliveryCart[idx].qty += delta;
+      if (deliveryCart[idx].qty <= 0) deliveryCart.splice(idx, 1);
+      renderDeliveryCart();
+    }
+
+    function renderDeliveryCart() {
+      const list = document.getElementById('deliveryCartList');
+      const totalDisplay = document.getElementById('deliveryTotalDisplay');
+
+      if (deliveryCart.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item selecionado.</div>`;
+        totalDisplay.innerText = 'R$ 0,00';
+        calculateChange();
+        return;
+      }
+
+      let html = '';
+      let total = 0;
+      deliveryCart.forEach((item, idx) => {
+        total += item.price * item.qty;
+        html += `
+          <div class="cart-item-row">
+            <span><strong>${item.qty}x</strong> ${item.name}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" onclick="changeCartQty(${idx}, -1)" style="background:var(--border); color:var(--text-main); border:none; width:20px; height:20px; border-radius:4px; cursor:pointer; font-weight:bold;">-</button>
+              <span>${item.qty}</span>
+              <button type="button" onclick="changeCartQty(${idx}, 1)" style="background:var(--border); color:var(--text-main); border:none; width:20px; height:20px; border-radius:4px; cursor:pointer; font-weight:bold;">+</button>
+            </div>
+          </div>
+        `;
+      });
+      list.innerHTML = html;
+      totalDisplay.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+      calculateChange();
+    }
+
+    function handlePaymentChange(val) {
+      const box = document.getElementById('cashChangeBox');
+      if (val === 'Dinheiro') box.classList.add('active');
+      else box.classList.remove('active');
+      calculateChange();
+    }
+
+    function maskCurrencyInput(input) {
+      let value = input.value.replace(/\D/g, '');
+      if (!value) {
+        input.value = 'R$ 0,00';
+        rawCashGiven = 0;
+        calculateChange();
+        return;
+      }
+      const numeric = parseFloat(value) / 100;
+      rawCashGiven = numeric;
+      input.value = 'R$ ' + numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      calculateChange();
+    }
+
+    function calculateChange() {
+      const payment = document.getElementById('paymentMethodSelect').value;
+      if (payment !== 'Dinheiro') return;
+
+      const total = deliveryCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      const display = document.getElementById('calculatedChangeDisplay');
+
+      if (rawCashGiven >= total && total > 0) {
+        const change = rawCashGiven - total;
+        display.innerText = `R$ ${change.toFixed(2).replace('.', ',')}`;
+        display.style.color = 'var(--success)';
+      } else if (rawCashGiven > 0) {
+        display.innerText = 'Falta dinheiro';
+        display.style.color = 'var(--danger)';
+      } else {
+        display.innerText = 'R$ 0,00';
+        display.style.color = 'var(--text-main)';
+      }
+    }
+
+    function generateDeliveryCode() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    function getLocalDateStr(dateObj) {
+      const d = dateObj || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function readLocalKdsOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem('vortex_kds_orders') || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveLocalKdsOrders(orders) {
+      deliveryLastLocalMutationAt = Date.now();
+      localStorage.setItem('vortex_kds_orders', JSON.stringify(orders));
+    }
+
+    function getDeliverySupabaseClient() {
+      try {
+        if (typeof getSupabase === 'function') {
+          const client = getSupabase();
+          if (client) return client;
+        }
+      } catch (error) {}
+      if (window.supabaseClient) return window.supabaseClient;
+      return null;
+    }
+
+    async function saveDeliveryKdsOrderToCloud(order) {
+      const client = getDeliverySupabaseClient();
+      if (!client) return { data: null, error: new Error('Supabase não inicializado') };
+
+      const record = {
+        id: String(order.id),
+        displayId: order.displayId ? String(order.displayId) : null,
+        origin: order.origin || 'Delivery 🛵',
+        client: order.client || 'Cliente',
+        address: order.address || '',
+        payment: order.payment || order.payMethod || 'Pix',
+        cashgiven: parseFloat(order.cashGiven || order.cashgiven || 0),
+        change: parseFloat(order.change || 0),
+        time: order.time || '',
+        date: order.date || new Date().toISOString().slice(0, 10),
+        dateformatted: order.dateFormatted || order.dateformatted || new Date().toLocaleDateString('pt-BR'),
+        items: Array.isArray(order.items) ? order.items : [],
+        total: Number(order.total) || 0,
+        observation: order.observation || '',
+        status: order.status || 'new',
+        code: order.code || String(order.id),
+        courier: order.courier || ''
+      };
+      const { data, error } = await client.from('vortex_kds_orders').upsert([record]);
+      return { data, error };
+    }
+
+    // Função para calcular o próximo número de exibição simples (#1, #2, #3...) sem alterar chaves técnicas
+    function getNextGlobalOrderNumber() {
+      try {
+        let allNumbers = [];
+        const kds = JSON.parse(localStorage.getItem('vortex_kds_orders') || '[]');
+        kds.forEach(o => {
+          let num = parseInt(o.displayId || o.displayid, 10);
+          if (!isNaN(num)) allNumbers.push(num);
+        });
+        if (allNumbers.length === 0) return 1;
+        return Math.max(...allNumbers) + 1;
+      } catch (e) {
+        return Math.floor(1 + Math.random() * 90);
+      }
+    }
+
+    async function submitDeliveryOrder() {
+      const clientName = document.getElementById('clientNameInput').value.trim();
+      const clientPhone = document.getElementById('clientPhoneInput').value.trim();
+      const cep = document.getElementById('cepInput').value.trim();
+      const number = document.getElementById('streetNumberInput').value.trim();
+      const street = document.getElementById('streetInput').value.trim();
+      const neighborhood = document.getElementById('neighborhoodInput').value.trim();
+      const city = document.getElementById('cityInput').value.trim();
+      const state = document.getElementById('stateInput').value.trim();
+      const complement = document.getElementById('complementInput').value.trim();
+      const ref = document.getElementById('refInput').value.trim();
+      const observation = document.getElementById('deliveryObsInput').value.trim();
+
+      if (!clientName || !clientPhone || !number || !street) {
+        showNoticeModal('Campos Obrigatórios', 'Preencha o Nome, Telefone, Rua e Número do cliente.', '⚠️');
+        return;
+      }
+
+      if (deliveryCart.length === 0) {
+        showNoticeModal('Carrinho Vazio', 'Adicione pelo menos um item ao pedido.', '⚠️');
+        return;
+      }
+
+      const total = deliveryCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      const payment = document.getElementById('paymentMethodSelect').value;
+
+      let cashGivenVal = 0;
+      let changeVal = 0;
+
+      if (payment === 'Dinheiro') {
+        if (rawCashGiven < total) {
+          showNoticeModal('Valor Insuficiente', 'O valor informado para o troco é menor que o total.', '⚠️');
+          return;
+        }
+        cashGivenVal = rawCashGiven;
+        changeVal = rawCashGiven - total;
+      }
+
+      let fullAddress = `${street}, Nº ${number} - ${neighborhood}`;
+      if (city && state) fullAddress += `, ${city} - ${state}`;
+      else if (city) fullAddress += `, ${city}`;
+      if (cep) fullAddress += ` | CEP: ${cep}`;
+      if (complement) fullAddress += ` | ${complement}`;
+      if (ref) fullAddress += ` | Ref: ${ref}`;
+
+      const now = new Date();
+      const todayDateStr = getLocalDateStr(now);
+      const dateFormatted = now.toLocaleDateString('pt-BR');
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      // ID técnico único preservado inalterado + Número de exibição limpo (#1, #2, #3...)
+      const technicalId = 'deliv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+      const displaySeqNumber = getNextGlobalOrderNumber();
+
+      let salesHistory = JSON.parse(localStorage.getItem('vortex_sales_history')) || [];
+      const newSaleRecord = {
+        id: technicalId,
+        displayId: displaySeqNumber,
+        client: `${clientName} (${clientPhone})`,
+        channel: 'Delivery 🛵',
+        total: total,
+        subtotal: total,
+        discount: 0,
+        pay_method: payment,
+        status: 'finished',
+        date: todayDateStr,
+        time: timeStr,
+        items: [...deliveryCart]
+      };
+      salesHistory.unshift(newSaleRecord);
+      localStorage.setItem('vortex_sales_history', JSON.stringify(salesHistory));
+
+      const deliveryCode = generateDeliveryCode();
+
+      const newOrder = {
+        id: technicalId,
+        displayId: displaySeqNumber,
+        origin: 'Delivery 🛵',
+        client: `${clientName} (${clientPhone})`,
+        address: fullAddress,
+        payment: payment,
+        payMethod: payment,
+        cashGiven: cashGivenVal,
+        change: changeVal,
+        observation: observation,
+        items: [...deliveryCart],
+        total: total,
+        status: 'new',
+        date: todayDateStr,
+        dateFormatted: dateFormatted,
+        time: timeStr,
+        code: deliveryCode,
+        courier: ''
+      };
+
+      let kdsOrders = readLocalKdsOrders();
+      kdsOrders.unshift(newOrder);
+      saveLocalKdsOrders(kdsOrders);
+
+      deliveryCart = [];
+      rawCashGiven = 0;
+      document.getElementById('clientNameInput').value = '';
+      document.getElementById('clientPhoneInput').value = '';
+      document.getElementById('cepInput').value = '';
+      document.getElementById('streetNumberInput').value = '';
+      document.getElementById('streetInput').value = '';
+      document.getElementById('neighborhoodInput').value = '';
+      document.getElementById('cityInput').value = '';
+      document.getElementById('stateInput').value = '';
+      document.getElementById('complementInput').value = '';
+      document.getElementById('refInput').value = '';
+      document.getElementById('deliveryObsInput').value = '';
+      document.getElementById('cashGivenInput').value = '';
+      renderDeliveryCart();
+      loadActiveOrders();
+
+      let cloudSuccess = true;
+      let cloudErrorMsg = '';
+      try {
+        if (typeof dbSaveSale === 'function') {
+          await dbSaveSale(newSaleRecord);
+        }
+        const cloudRes = await saveDeliveryKdsOrderToCloud(newOrder);
+        if (cloudRes && cloudRes.error) {
+          cloudSuccess = false;
+          cloudErrorMsg = cloudRes.error.message || JSON.stringify(cloudRes.error);
+        }
+      } catch (e) {
+        cloudSuccess = false;
+        cloudErrorMsg = e.message || String(e);
+      }
+
+      if (cloudSuccess) {
+        showNoticeModal('Pedido Cadastrado!', `Pedido #${displaySeqNumber} registrado e encaminhado para o KDS com sucesso!`, '🛵');
+      } else {
+        showNoticeModal('Salvo Localmente (Aviso de Nuvem)', `Pedido #${displaySeqNumber} salvo no dispositivo, mas a nuvem retornou aviso: ${cloudErrorMsg}`, '⚠️');
+      }
+    }
+
+    let deliveryOrdersFetchInFlight = false;
+    let deliveryLastLocalMutationAt = 0;
+    let deliveryLastRenderedSignature = '';
+
+    function deliveryOrdersSignature(orders) {
+      try {
+        return JSON.stringify(orders.map(o => ({
+          id: o.id, displayId: o.displayId, status: o.status, courier: o.courier, client: o.client,
+          address: o.address, total: o.total, payment: o.payment
+        })));
+      } catch (error) {
+        return String(Date.now());
+      }
+    }
+
+    async function syncKdsPatch(orderId, patch) {
+      try {
+        const supabase = getDeliverySupabaseClient();
+        if (!supabase) return { error: new Error('Supabase não inicializado') };
+        return await supabase.from('vortex_kds_orders').update(patch).eq('id', String(orderId));
+      } catch (error) {
+        return { error };
+      }
+    }
+
+    function renderActiveDeliveryOrders(kdsOrders, force = false) {
+      const todayDateStr = getLocalDateStr(new Date());
+      const deliveryOrders = kdsOrders.filter(o => {
+        if (!o.origin || !String(o.origin).includes('Delivery')) return false;
+        if (o.status === 'cancelled') return false;
+        let itemDate = o.date ? o.date.split('T')[0] : todayDateStr;
+        if (o.status === 'finished') return itemDate === todayDateStr;
+        return true;
+      });
+
+      const signature = deliveryOrdersSignature(deliveryOrders);
+      if (!force && signature === deliveryLastRenderedSignature) return;
+      deliveryLastRenderedSignature = signature;
+
+      const container = document.getElementById('deliveryOrdersList');
+      if (!container) return;
+      if (deliveryOrders.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:20px;">Nenhum pedido de delivery ativo no momento.</div>`;
+        return;
+      }
+
+      const cardsHtml = deliveryOrders.map(o => {
+        const visibleNum = o.displayId || o.id;
+        let statusClass = 'status-new';
+        let statusText = 'Em Espera';
+        let actionAreaHtml = '';
+        if (o.status === 'new') {
+          statusClass = 'status-new'; statusText = 'Novo / Na Fila';
+          actionAreaHtml = `<div style="font-size:0.78rem; color:var(--text-muted); text-align:center; margin-top:4px;">Aguardando aceite na cozinha...</div>`;
+        } else if (o.status === 'preparing') {
+          statusClass = 'status-preparing'; statusText = 'Em Preparo na Cozinha ⏳';
+          actionAreaHtml = `<div style="font-size:0.78rem; color:var(--warning); text-align:center; margin-top:4px;">Em produção pela cozinha...</div>`;
+        } else if (o.status === 'ready') {
+          statusClass = 'status-ready'; statusText = 'Pronto na Cozinha 🟢';
+          actionAreaHtml = `<button class="action-btn-delivery btn-dispatch" onclick="dispatchOrderDirect('${o.id}')">Despachar Pedido 🛵</button>`;
+        } else if (o.status === 'delivering') {
+          statusClass = 'status-route'; statusText = `Em Rota (${o.courier || 'Sem Motoboy'}) 🛵`;
+          actionAreaHtml = `<div style="margin-top:6px;"><div class="code-input-row"><input type="text" class="code-input" id="codeInput_${o.id}" placeholder="Digitar Código" maxlength="4"><button class="action-btn-delivery btn-deliver" style="margin:0; width:auto; padding:0 12px;" onclick="confirmDeliveryWithCode('${o.id}')">Validar Código ✅</button></div><button class="action-btn-delivery btn-deliver" style="margin-top:6px;" onclick="finishDeliveryOrder('${o.id}')">Marcar como Entregue ✅</button></div>`;
+        } else if (o.status === 'finished') {
+          statusClass = 'status-finished'; statusText = 'Entregue / Concluído ✅';
+          actionAreaHtml = `<div style="font-size:0.78rem; color:var(--success); text-align:center; margin-top:4px;">Pedido finalizado com sucesso.</div>`;
+        }
+        const itemsText = o.items ? o.items.map(i => `${i.qty}x ${i.name}`).join(', ') : '';
+        const cashGiven = Number(o.cashGiven || o.cashgiven) || 0;
+        const change = Number(o.change) || 0;
+        const changeInfoHtml = o.payment === 'Dinheiro' && cashGiven > 0
+          ? `<br>💵 Troco para: <strong>R$ ${cashGiven.toFixed(2).replace('.', ',')}</strong> | 🪙 Levar Troco: <strong style="color:var(--warning);">${change.toFixed(2).replace('.', ',')}</strong>` : '';
+        return `<div class="order-card"><div class="order-header"><span class="order-id">#${visibleNum} - ${o.client || 'Cliente'}</span><span class="order-status ${statusClass}">${statusText}</span></div><div style="font-size:0.82rem; color:var(--text-muted);">📍 <strong>Endereço:</strong> ${o.address || ''}<br>🍔 ${itemsText}<br>🛵 <strong>Motoboy:</strong> <span style="color:var(--primary); font-weight:bold;">${o.courier || 'Nenhum atribuído'}</span> <button class="btn-secondary" style="padding:2px 6px; font-size:0.7rem; margin-left:6px;" onclick="openEditCourierModal('${o.id}')">✏️ Alterar</button><br>${o.observation ? `<span style="color:var(--warning);">⚠️ Obs: ${o.observation}</span><br>` : ''}🔒 Código de Validação: <strong style="color:var(--info);">${o.code || '----'}</strong><br>💰 Total: <strong>R$ ${Number(o.total || 0).toFixed(2).replace('.', ',')}</strong> (${o.payment || 'Not info'})${changeInfoHtml}</div>${actionAreaHtml}<button class="btn-print-ticket" onclick="printDeliveryTicket('${o.id}')">🖨️ Imprimir Comanda Delivery</button></div>`;
+      }).join('');
+      container.innerHTML = cardsHtml;
+    }
+
+    async function loadActiveOrders(options = {}) {
+      const activeElement = document.activeElement;
+      if (activeElement && activeElement.classList.contains('code-input')) return;
+
+      const localOrders = readLocalKdsOrders();
+      renderActiveDeliveryOrders(localOrders);
+      const supabase = getDeliverySupabaseClient();
+      if (options.skipRemote || !supabase || deliveryOrdersFetchInFlight) return;
+
+      deliveryOrdersFetchInFlight = true;
+      try {
+        const { data, error } = await supabase.from('vortex_kds_orders').select('*');
+        if (error) throw error;
+        if (!Array.isArray(data)) return;
+
+        if (Date.now() - deliveryLastLocalMutationAt < 2500) return;
+        const currentLocal = readLocalKdsOrders();
+        const localById = new Map(currentLocal.map(order => [String(order.id), order]));
+        const remoteIds = new Set(data.map(r => String(r.id)));
+
+        const mergedMap = new Map();
+        data.forEach(remoteOrder => {
+          const localOrder = localById.get(String(remoteOrder.id)) || {};
+          const finalDisplayId = remoteOrder.displayId || remoteOrder.displayid || localOrder.displayId || localOrder.displayid || null;
+          mergedMap.set(String(remoteOrder.id), {
+            ...localOrder,
+            ...remoteOrder,
+            displayId: finalDisplayId
+          });
+        });
+
+        currentLocal.forEach(localOrder => {
+          if (!remoteIds.has(String(localOrder.id))) {
+            mergedMap.set(String(localOrder.id), localOrder);
+          }
+        });
+
+        const merged = Array.from(mergedMap.values());
+        localStorage.setItem('vortex_kds_orders', JSON.stringify(merged));
+        renderActiveDeliveryOrders(merged);
+      } catch (error) {
+        console.warn('Falha ao atualizar pedidos do Delivery na nuvem (mantendo dados locais).', error);
+      } finally {
+        deliveryOrdersFetchInFlight = false;
+      }
+    }
+
+    async function dispatchOrderDirect(orderId) {
+      const kdsOrders = readLocalKdsOrders();
+      const order = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!order) return;
+      order.status = 'delivering';
+      if (!order.courier) order.courier = document.getElementById('selectCourierForRoute').value || 'Não atribuído';
+      saveLocalKdsOrders(kdsOrders);
+      recordCourierHistory(order);
+      renderActiveDeliveryOrders(kdsOrders, true);
+      const visibleNum = order.displayId || orderId;
+      showNoticeModal('Pedido Despachado!', `O pedido #${visibleNum} foi enviado para rota.`, '🚀');
+      await syncKdsPatch(orderId, { status: 'delivering', courier: order.courier });
+    }
+
+    async function finishDeliveryOrder(orderId) {
+      const kdsOrders = readLocalKdsOrders();
+      const order = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!order) return;
+      order.status = 'finished';
+      saveLocalKdsOrders(kdsOrders);
+      recordCourierHistory(order);
+      renderActiveDeliveryOrders(kdsOrders, true);
+      const visibleNum = order.displayId || orderId;
+      showNoticeModal('Pedido Entregue!', `O pedido #${visibleNum} foi concluído.`, '✅');
+      await syncKdsPatch(orderId, { status: 'finished' });
+    }
+
+    async function confirmDeliveryWithCode(orderId) {
+      const kdsOrders = readLocalKdsOrders();
+      const order = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!order) return;
+      const inputVal = document.getElementById(`codeInput_${orderId}`)?.value.trim();
+      const visibleNum = order.displayId || orderId;
+      if (inputVal !== order.code) {
+        showNoticeModal('Código Incorreto', `O código digitado não confere com o código do cliente.`, '⚠️');
+        return;
+      }
+      order.status = 'finished';
+      saveLocalKdsOrders(kdsOrders);
+      recordCourierHistory(order);
+      renderActiveDeliveryOrders(kdsOrders, true);
+      showNoticeModal('Código Confirmado!', `Entrega do pedido #${visibleNum} validada.`, '🎉');
+      await syncKdsPatch(orderId, { status: 'finished' });
+    }
+
+    function printDeliveryTicket(orderId) {
+      let kdsOrders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      const o = kdsOrders.find(item => String(item.id) === String(orderId));
+      if (!o) return;
+
+      const visibleNum = o.displayId || o.id;
+      const storeSettings = JSON.parse(localStorage.getItem('vortex_store_settings')) || { storeName: 'BESTBURGUERS' };
+      const itemsHtml = o.items ? o.items.map(i => `<tr><td>${i.qty}x ${i.name}</td><td style="text-align:right;">R$ ${(i.price * i.qty).toFixed(2).replace('.', ',')}</td></tr>`).join('') : '';
+
+      let trocoPrintHtml = '';
+      let cashGivenVal = Number(o.cashGiven || o.cashgiven) || 0;
+      if (o.payment === 'Dinheiro' && cashGivenVal > 0) {
+        trocoPrintHtml = `<p>Troco para: R$ ${cashGivenVal.toFixed(2).replace('.', ',')}<br><strong>LEVAR TROCO: R$ ${(o.change || 0).toFixed(2).replace('.', ',')}</strong></p>`;
+      }
+
+      const printWin = window.open('', '_blank', 'width=380,height=600');
+      printWin.document.write(`
+        <html>
+          <head>
+            <title>Comanda Delivery #${visibleNum}</title>
+            <style>
+              body { font-family: monospace; font-size: 12px; color: #000; width: 280px; margin: 0 auto; padding: 10px; }
+              .text-center { text-align: center; }
+              .line { border-bottom: 1px dashed #000; margin: 8px 0; }
+              table { width: 100%; font-size: 12px; }
+              h2, h3 { margin: 4px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="text-center">
+              <h2>${storeSettings.storeName}</h2>
+              <h3>PEDIDO DELIVERY #${visibleNum}</h3>
+              <p>Data: ${o.dateFormatted || o.dateformatted || new Date().toLocaleDateString('pt-BR')} | Horário: ${o.time || '--:--'}</p>
+            </div>
+            <div class="line"></div>
+            <p><strong>CLIENTE:</strong> ${o.client}<br><strong>ENDEREÇO:</strong><br>${o.address}</p>
+            <div class="line"></div>
+            <table><tbody>${itemsHtml}</tbody></table>
+            <div class="line"></div>
+            ${o.observation ? `<p><strong>OBS:</strong> ${o.observation}</p><div class="line"></div>` : ''}
+            <p><strong>PAGAMENTO:</strong> ${o.payment}</p>
+            ${trocoPrintHtml}
+            <p style="font-size: 14px;"><strong>TOTAL: R$ ${parseFloat(o.total || 0).toFixed(2).replace('.', ',')}</strong></p>
+            <div class="line"></div>
+            <p class="text-center">VORTEX FOOD - Sistema de Gestão</p>
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
+
+    function showNoticeModal(title, desc, icon) {
+      document.getElementById('noticeIcon').innerText = icon || '🎉';
+      document.getElementById('noticeTitle').innerText = title;
+      document.getElementById('noticeDesc').innerHTML = desc;
+      document.getElementById('noticeModal').classList.add('active');
+    }
+
+    function closeNoticeModal() {
+      document.getElementById('noticeModal').classList.remove('active');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    setInterval(() => {
+      loadActiveOrders();
+    }, 6000);
+
+    window.onload = function() {
+      loadStoreSettings();
+      renderCatalog();
+      loadActiveOrders();
+    };
+  </script>
+</body>
+</html>

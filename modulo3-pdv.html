@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - PDV / Caixa</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    .pdv-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+    .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+    .catalog-item-card { background: var(--bg-main); border: 1px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+    .catalog-item-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .catalog-item-name { font-size: 0.85rem; font-weight: bold; }
+    .catalog-item-price { font-size: 0.9rem; color: var(--success); font-weight: bold; }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
+    input, select { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); width: 100%; padding: 9px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .type-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .type-btn {
+      background: var(--bg-main); border: 1px solid var(--border); color: var(--text-muted); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s;
+    }
+    .type-btn:hover { border-color: var(--primary); color: var(--text-main); }
+    .type-btn.active { background: rgba(249, 115, 22, 0.15); border-color: var(--primary); color: var(--primary); }
+
+    .pdv-cart-list { max-height: 150px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .cart-item-row { background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+
+    .cash-change-box { display: none; background: rgba(15, 23, 42, 0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; margin-bottom: 8px; }
+    .cash-change-box.active { display: block; }
+    .change-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.85rem; margin-top: 6px; }
+
+    .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+    .btn-submit:hover { background: var(--primary-hover); }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 25px; width: 100%; max-width: 400px; text-align: center; }
+    .btn-modal-primary { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; }
+
+    @media (max-width: 900px) {
+      .pdv-grid { grid-template-columns: 1fr; }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px 15px 80px 15px; }
+      .toggle-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link active"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>PDV / Caixa (Balcão)</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <div class="pdv-grid">
+      <div class="card-box">
+        <div class="card-title">📋 Cardápio para Venda no Balcão</div>
+        <div class="catalog-grid" id="catalogGrid"></div>
+      </div>
+
+      <div class="card-box">
+        <div class="card-title">💻 Carrinho do PDV</div>
+
+        <div class="form-group">
+          <label for="pdvClientInput">Nome do Cliente (Opcional):</label>
+          <input type="text" id="pdvClientInput" placeholder="Ex: Cliente Balcão">
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de Atendimento *:</label>
+          <div class="type-buttons-grid">
+            <button type="button" class="type-btn active" id="btnConsumoLocal" onclick="setConsumptionType('Consumo no Local')">🍽️ Consumo no Local</button>
+            <button type="button" class="type-btn" id="btnParaViagem" onclick="setConsumptionType('Para Viagem')">🛍️ Para Viagem</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Itens Selecionados:</label>
+          <div class="pdv-cart-list" id="pdvCartList">
+            <div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item adicionado.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pdvObsInput">Observação do Pedido:</label>
+          <input type="text" id="pdvObsInput" placeholder="Ex: Sem cebola, caprichar no molho...">
+        </div>
+
+        <div class="form-group">
+          <label for="pdvPaymentSelect">Forma de Pagamento:</label>
+          <select id="pdvPaymentSelect" onchange="handlePaymentChange(this.value)">
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Pix">Pix</option>
+            <option value="Cartão de Débito">Cartão de Débito</option>
+            <option value="Cartão de Crédito">Cartão de Crédito</option>
+            <option value="Vale Refeição - VR">Vale Refeição - VR</option>
+            <option value="Vale Alimentação - VA">Vale Alimentação - VA</option>
+          </select>
+        </div>
+
+        <div class="cash-change-box active" id="cashChangeBox">
+          <label for="cashGivenInput">Dinheiro recebido (Troco):</label>
+          <input type="text" id="cashGivenInput" placeholder="R$ 0,00" oninput="maskCurrencyInput(this)">
+          <div class="change-row">
+            <span>Troco a Devolver:</span>
+            <span id="calculatedChangeDisplay">R$ 0,00</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:bold; margin:15px 0;">
+          <span>Total a Pagar:</span>
+          <span id="pdvTotalDisplay" style="color:var(--success);">R$ 0,00</span>
+        </div>
+
+        <button class="btn-submit" onclick="finalizePdvOrder()">Finalizar Venda & Enviar p/ Cozinha 🚀</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="noticeModal">
+    <div class="custom-modal-card">
+      <div style="font-size:3rem; margin-bottom:12px;" id="noticeIcon">🎉</div>
+      <div style="font-size:1.25rem; font-weight:bold; margin-bottom:10px;" id="noticeTitle">Venda Concluída!</div>
+      <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;" id="noticeDesc">Pedido enviado ao KDS.</div>
+      <button class="btn-modal-primary" onclick="closeNoticeModal()">Entendido</button>
+    </div>
+  </div>
+
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    let pdvCart = [];
+    let selectedConsumptionType = 'Consumo no Local';
+    let rawCashGiven = 0;
+    let kdsOrdersCache = null;
+    let kdsOrdersFetchPromise = null;
+    let activePdvSyncId = null;
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    async function loadStoreSettings() {
+      applyTheme();
+      let storeName = 'MEU ESTABELECIMENTO';
+      let sidebarLogoUrl = '';
+
+      try {
+        const settings = JSON.parse(localStorage.getItem('vortex_store_settings')) || {};
+        storeName = settings.storeName || settings.nome || 'MEU ESTABELECIMENTO';
+        sidebarLogoUrl = localStorage.getItem('vortex_store_logo') || '';
+      } catch (e) {}
+
+      document.getElementById('sidebarStoreName').innerText = storeName;
+      const sidebarLogo = document.getElementById('sidebarStoreLogo');
+      if (sidebarLogoUrl) {
+        sidebarLogo.src = sidebarLogoUrl;
+        sidebarLogo.style.display = 'block';
+      } else {
+        sidebarLogo.style.display = 'none';
+      }
+    }
+
+    async function getCatalogProducts() {
+      let rawProducts = [];
+      try {
+        if (typeof dbFetchProducts === 'function') {
+          rawProducts = await dbFetchProducts();
+        } else if (typeof dbFetchCatalog === 'function') {
+          const result = await dbFetchCatalog();
+          rawProducts = Array.isArray(result) ? result : (result && Array.isArray(result.products) ? result.products : []);
+        }
+      } catch (e) {
+        console.warn('Não foi possível carregar o catálogo da nuvem; usando o cache local.', e);
+      }
+
+      if (!Array.isArray(rawProducts) || rawProducts.length === 0) {
+        try {
+          const saved = localStorage.getItem('vortex_products_catalog') || localStorage.getItem('vortex_cardapio_produtos');
+          if (saved) rawProducts = JSON.parse(saved);
+        } catch (e) {
+          console.warn('O catálogo local não pôde ser lido.', e);
+          rawProducts = [];
+        }
+      }
+
+      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+        return rawProducts.filter(p => p && p.active !== false).map(p => ({
+          id: p.id,
+          name: String(p.name || p.nome || 'Produto'),
+          price: parseFloat(p.price ?? p.salePrice ?? p.preco ?? 0),
+          category: p.category || p.categoria || 'Geral'
+        }));
+      }
+
+      return [
+        { id: 1, name: 'X-Burger Especial', price: 28.50, category: 'Lanches' },
+        { id: 2, name: 'X-Salada Duplo', price: 32.00, category: 'Lanches' }
+      ];
+    }
+
+    function readLocalKdsOrders() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem('vortex_kds_orders') || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('O cache local dos pedidos está inválido.', e);
+        return [];
+      }
+    }
+
+    function mergeKdsOrders(remoteOrders, localOrders) {
+      const byId = new Map();
+      (Array.isArray(remoteOrders) ? remoteOrders : []).forEach(order => {
+        if (order && order.id != null) byId.set(String(order.id), order);
+      });
+      // O registro local prevalece para não apagar alterações locais ainda pendentes.
+      (Array.isArray(localOrders) ? localOrders : []).forEach(order => {
+        if (order && order.id != null) byId.set(String(order.id), order);
+      });
+      return Array.from(byId.values());
+    }
+
+    function prefetchKdsOrders() {
+      if (kdsOrdersFetchPromise) return kdsOrdersFetchPromise;
+      kdsOrdersFetchPromise = (async () => {
+        try {
+          if (typeof dbFetchKdsOrders === 'function') {
+            const remote = await dbFetchKdsOrders();
+            if (Array.isArray(remote)) {
+              kdsOrdersCache = mergeKdsOrders(remote, readLocalKdsOrders());
+              localStorage.setItem('vortex_kds_orders', JSON.stringify(kdsOrdersCache));
+              return kdsOrdersCache;
+            }
+          }
+        } catch (e) {
+          console.warn('Não foi possível pré-carregar os pedidos da nuvem.', e);
+        }
+        kdsOrdersCache = readLocalKdsOrders();
+        return kdsOrdersCache;
+      })();
+      return kdsOrdersFetchPromise;
+    }
+
+    async function savePdvKdsOrderToCloud(order) {
+      // O esquema atual não possui cashGiven/change; enviar apenas colunas usadas pelo KDS.
+      let client = null;
+      if (typeof getSupabase === 'function') client = getSupabase();
+      if (!client && window.supabaseClient) client = window.supabaseClient;
+      if (!client) return { data: null, error: new Error('Supabase não inicializado') };
+
+      const record = {
+        id: String(order.id),
+        origin: order.origin || 'Balcão',
+        client: order.client || 'Cliente Balcão',
+        address: order.address || '',
+        payment: order.payment || 'Dinheiro',
+        time: order.time || '',
+        date: order.date || new Date().toISOString().slice(0, 10),
+        items: Array.isArray(order.items) ? order.items : [],
+        total: Number(order.total) || 0,
+        observation: order.observation || '',
+        status: order.status || 'new',
+        code: order.code || String(order.id)
+      };
+      const { data, error } = await client.from('vortex_kds_orders').upsert([record]);
+      return { data, error };
+    }
+
+    function setConsumptionType(type) {
+      selectedConsumptionType = type;
+      if (type === 'Consumo no Local') {
+        document.getElementById('btnConsumoLocal').classList.add('active');
+        document.getElementById('btnParaViagem').classList.remove('active');
+      } else {
+        document.getElementById('btnParaViagem').classList.add('active');
+        document.getElementById('btnConsumoLocal').classList.remove('active');
+      }
+    }
+
+    async function renderCatalog() {
+      const grid = document.getElementById('catalogGrid');
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 20px;">Carregando cardápio...</div>';
+      const catalogProducts = await getCatalogProducts();
+      grid.replaceChildren();
+
+      if (catalogProducts.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 20px;">Nenhum produto disponível no cardápio.</div>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      catalogProducts.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'catalog-item-card';
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        const name = document.createElement('div');
+        name.className = 'catalog-item-name';
+        name.textContent = product.name;
+        const price = document.createElement('div');
+        price.className = 'catalog-item-price';
+        price.textContent = `R$ ${Number(product.price || 0).toFixed(2).replace('.', ',')}`;
+        card.append(name, price);
+        const addProduct = () => addToPdvCart(product.name, Number(product.price) || 0, product.category || 'Geral');
+        card.addEventListener('click', addProduct);
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            addProduct();
+          }
+        });
+        fragment.appendChild(card);
+      });
+      grid.appendChild(fragment);
+    }
+
+    function addToPdvCart(name, price, category) {
+      const existing = pdvCart.find(i => i.name === name);
+      if (existing) existing.qty += 1;
+      else pdvCart.push({ name, price, qty: 1, category: category || 'Geral' });
+      renderPdvCart();
+    }
+
+    function changePdvQty(idx, delta) {
+      pdvCart[idx].qty += delta;
+      if (pdvCart[idx].qty <= 0) pdvCart.splice(idx, 1);
+      renderPdvCart();
+    }
+
+    function renderPdvCart() {
+      const list = document.getElementById('pdvCartList');
+      const totalDisplay = document.getElementById('pdvTotalDisplay');
+
+      if (pdvCart.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Nenhum item adicionado.</div>`;
+        totalDisplay.innerText = 'R$ 0,00';
+        calculateChange();
+        return;
+      }
+
+      let html = '';
+      let total = 0;
+      pdvCart.forEach((item, idx) => {
+        total += item.price * item.qty;
+        html += `
+          <div class="cart-item-row">
+            <span><strong>${item.qty}x</strong> ${item.name}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" onclick="changePdvQty(${idx}, -1)" style="background:var(--border); color:var(--text-main); border:none; width:20px; height:20px; border-radius:4px; cursor:pointer; font-weight:bold;">-</button>
+              <span>${item.qty}</span>
+              <button type="button" onclick="changePdvQty(${idx}, 1)" style="background:var(--border); color:var(--text-main); border:none; width:20px; height:20px; border-radius:4px; cursor:pointer; font-weight:bold;">+</button>
+            </div>
+          </div>
+        `;
+      });
+      list.innerHTML = html;
+      totalDisplay.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+      calculateChange();
+    }
+
+    function handlePaymentChange(val) {
+      const box = document.getElementById('cashChangeBox');
+      if (val === 'Dinheiro') box.classList.add('active');
+      else box.classList.remove('active');
+      calculateChange();
+    }
+
+    function maskCurrencyInput(input) {
+      let value = input.value.replace(/\D/g, '');
+      if (!value) {
+        input.value = 'R$ 0,00';
+        rawCashGiven = 0;
+        calculateChange();
+        return;
+      }
+      const numeric = parseFloat(value) / 100;
+      rawCashGiven = numeric;
+      input.value = 'R$ ' + numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      calculateChange();
+    }
+
+    function calculateChange() {
+      const payment = document.getElementById('pdvPaymentSelect').value;
+      const total = pdvCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      const display = document.getElementById('calculatedChangeDisplay');
+
+      if (payment !== 'Dinheiro') {
+        display.innerText = 'R$ 0,00';
+        display.style.color = 'var(--text-main)';
+        return;
+      }
+
+      if (rawCashGiven >= total && total > 0) {
+        const change = rawCashGiven - total;
+        display.innerText = `R$ ${change.toFixed(2).replace('.', ',')}`;
+        display.style.color = 'var(--success)';
+      } else if (rawCashGiven > 0) {
+        display.innerText = 'Falta dinheiro';
+        display.style.color = 'var(--danger)';
+      } else {
+        display.innerText = 'R$ 0,00';
+        display.style.color = 'var(--text-main)';
+      }
+    }
+
+    function getLocalDateStr(dateObj) {
+      const d = dateObj || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    async function finalizePdvOrder() {
+      if (pdvCart.length === 0) {
+        showNoticeModal('Carrinho Vazio', 'Adicione itens ao carrinho antes de finalizar.', '⚠️');
+        return;
+      }
+
+      const clientName = document.getElementById('pdvClientInput').value.trim() || 'Balcão';
+      const observation = document.getElementById('pdvObsInput').value.trim();
+      const payment = document.getElementById('pdvPaymentSelect').value;
+      const total = pdvCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+      if (payment === 'Dinheiro' && rawCashGiven < total) {
+        showNoticeModal('Valor Insuficiente', 'O valor em dinheiro informado é menor que o total da compra.', '⚠️');
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = getLocalDateStr(now);
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      // A leitura da nuvem é feita antecipadamente ao abrir o módulo. Se o usuário
+      // finalizar antes de essa primeira leitura terminar, aguardamos somente essa
+      // primeira carga para evitar reutilizar um número de pedido já existente.
+      if (!Array.isArray(kdsOrdersCache)) {
+        await prefetchKdsOrders();
+      }
+      const localOrders = readLocalKdsOrders();
+      const knownOrders = mergeKdsOrders(kdsOrdersCache || [], localOrders);
+      const todayOrders = knownOrders.filter(order => (order.date || '').split('T')[0] === dateStr && !isNaN(parseInt(order.id, 10)));
+      const nextSeqNumber = todayOrders.length > 0 ? Math.max(...todayOrders.map(order => parseInt(order.id, 10))) + 1 : 1;
+      const cleanOrderId = String(nextSeqNumber);
+
+      const changeVal = payment === 'Dinheiro' && rawCashGiven > total ? rawCashGiven - total : 0;
+      const channelLabel = `Balcão (${selectedConsumptionType})`;
+      const saleItems = pdvCart.map(item => ({
+        name: item.name,
+        price: Number(item.price) || 0,
+        qty: Number(item.qty) || 1,
+        category: item.category || 'Geral'
+      }));
+
+      const newSaleRecord = {
+        id: cleanOrderId,
+        client: clientName,
+        channel: channelLabel,
+        total,
+        subtotal: total,
+        discount: 0,
+        payMethod: payment,
+        payment: payment,
+        paymentMethod: payment,
+        status: 'finished',
+        date: dateStr,
+        time: timeStr,
+        items: saleItems
+      };
+
+      const newKdsOrder = {
+        id: cleanOrderId,
+        origin: channelLabel,
+        client: clientName,
+        address: selectedConsumptionType,
+        payment,
+        payMethod: payment,
+        paymentMethod: payment,
+        cashGiven: payment === 'Dinheiro' ? rawCashGiven : total,
+        change: changeVal,
+        changeValue: changeVal,
+        time: timeStr,
+        date: dateStr,
+        dateFormatted: now.toLocaleDateString('pt-BR'),
+        items: saleItems,
+        total,
+        observation,
+        status: 'new',
+        code: cleanOrderId
+      };
+
+      // Persistência local e atualização da tela acontecem antes da rede.
+      const salesHistory = (() => {
+        try {
+          const parsed = JSON.parse(localStorage.getItem('vortex_sales_history') || '[]');
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+      })();
+      salesHistory.unshift(newSaleRecord);
+      localStorage.setItem('vortex_sales_history', JSON.stringify(salesHistory));
+
+      const updatedOrders = mergeKdsOrders(knownOrders, []);
+      const existingIndex = updatedOrders.findIndex(order => String(order.id) === cleanOrderId);
+      if (existingIndex >= 0) updatedOrders.splice(existingIndex, 1);
+      updatedOrders.unshift(newKdsOrder);
+      kdsOrdersCache = updatedOrders;
+      localStorage.setItem('vortex_kds_orders', JSON.stringify(updatedOrders));
+
+      pdvCart = [];
+      rawCashGiven = 0;
+      document.getElementById('pdvClientInput').value = '';
+      document.getElementById('pdvObsInput').value = '';
+      document.getElementById('cashGivenInput').value = '';
+      renderPdvCart();
+
+      activePdvSyncId = cleanOrderId;
+      showNoticeModal('Venda registrada!', `Pedido #${cleanOrderId} salvo neste dispositivo. Sincronizando com a nuvem...`, '⏳');
+
+      // As duas gravações são independentes e executadas em paralelo.
+      const syncSale = (async () => {
+        // Usa o nome real da coluna confirmado no Supabase: pay_method.
+        // Assim evitamos que dbSaveSale envie a chave antiga payMethod.
+        let client = null;
+        try {
+          if (typeof getSupabase === 'function') client = getSupabase();
+          if (!client && window.supabaseClient) client = window.supabaseClient;
+        } catch (error) {
+          return { error };
+        }
+        if (!client) return { error: new Error('Supabase não inicializado') };
+
+        const saleRecord = {
+          id: String(newSaleRecord.id),
+          client: newSaleRecord.client,
+          channel: newSaleRecord.channel,
+          total: Number(newSaleRecord.total) || 0,
+          subtotal: Number(newSaleRecord.subtotal) || 0,
+          discount: Number(newSaleRecord.discount) || 0,
+          pay_method: payment,
+          status: newSaleRecord.status || 'finished',
+          date: newSaleRecord.date,
+          time: newSaleRecord.time,
+          items: Array.isArray(newSaleRecord.items) ? newSaleRecord.items : []
+        };
+        const { data, error } = await client.from('vortex_sales_history').upsert([saleRecord]);
+        return { data, error };
+      })();
+      const syncKds = savePdvKdsOrderToCloud(newKdsOrder);
+
+      Promise.all([syncSale, syncKds]).then(results => {
+        const errors = results.filter(result => !result || result.error).map(result => result && result.error).filter(Boolean);
+        const modal = document.getElementById('noticeModal');
+        const isSameSaleNotice = activePdvSyncId === cleanOrderId && modal && modal.classList.contains('active');
+        if (errors.length === 0) {
+          console.info(`Venda #${cleanOrderId} sincronizada com o Supabase.`);
+          if (isSameSaleNotice) {
+            document.getElementById('noticeIcon').innerText = '🚀';
+            document.getElementById('noticeTitle').innerText = 'Venda realizada!';
+            document.getElementById('noticeDesc').textContent = `Pedido #${cleanOrderId} (${selectedConsumptionType}) sincronizado com a nuvem e enviado para a Cozinha.`;
+          }
+        } else {
+          console.error(`Falha ao sincronizar a venda #${cleanOrderId}:`, errors);
+          if (isSameSaleNotice) {
+            document.getElementById('noticeIcon').innerText = '⚠️';
+            document.getElementById('noticeTitle').innerText = 'Sincronização pendente';
+            document.getElementById('noticeDesc').textContent = `O pedido #${cleanOrderId} está salvo neste dispositivo, mas a sincronização com a nuvem falhou. Verifique a conexão e o esquema do Supabase. Detalhe: ${errors.map(error => error.message || String(error)).join('; ')}`;
+          }
+        }
+      }).catch(error => {
+        console.error(`Erro inesperado ao sincronizar a venda #${cleanOrderId}:`, error);
+      });
+    }
+
+    function showNoticeModal(title, desc, icon) {
+      document.getElementById('noticeIcon').innerText = icon || '🎉';
+      document.getElementById('noticeTitle').innerText = title;
+      document.getElementById('noticeDesc').innerHTML = desc;
+      document.getElementById('noticeModal').classList.add('active');
+    }
+
+    function closeNoticeModal() {
+      document.getElementById('noticeModal').classList.remove('active');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    window.onload = function() {
+      loadStoreSettings();
+      renderCatalog();
+      handlePaymentChange(document.getElementById('pdvPaymentSelect').value);
+      // Pré-carrega os pedidos em segundo plano para não consultar a nuvem a cada venda.
+      prefetchKdsOrders();
+    };
+  </script>
+</body>
+</html>

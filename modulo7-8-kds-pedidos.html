@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - KDS / Cozinha</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; flex-shrink: 0; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    .kds-controls-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; flex-shrink: 0; }
+    .filter-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .tab-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .tab-btn:hover, .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    
+    .search-kds-input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 10px; font-size: 0.85rem; outline: none; width: 220px; }
+    .search-kds-input:focus { border-color: var(--primary); }
+
+    .kds-scroll-container { flex: 1; overflow-y: auto; padding-right: 4px; padding-bottom: 20px; }
+
+    @keyframes pulseNewOrder {
+      0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+    }
+
+    .kds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .kds-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border-top: 5px solid var(--border); }
+    
+    .kds-card.status-new, .kds-card.status-received { border-top-color: var(--warning); animation: pulseNewOrder 2s infinite; }
+    .kds-card.status-preparing { border-top-color: var(--info); }
+    .kds-card.status-ready { border-top-color: var(--success); }
+    .kds-card.status-finished, .kds-card.status-completed { border-top-color: var(--text-muted); opacity: 0.75; }
+    .kds-card.status-cancelled { border-top-color: var(--danger); opacity: 0.6; }
+
+    .kds-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .order-id-tag { font-weight: bold; font-size: 1.1rem; }
+    .order-origin { font-size: 0.78rem; font-weight: bold; padding: 3px 8px; border-radius: 12px; background: rgba(255,255,255,0.08); color: var(--text-main); }
+    
+    .order-client { font-size: 0.85rem; font-weight: bold; color: var(--text-muted); margin-top: 2px; }
+    .order-time { font-size: 0.78rem; color: var(--text-muted); }
+
+    .items-list { background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+    .item-row { font-size: 0.85rem; display: flex; justify-content: space-between; font-weight: 600; }
+    .order-obs { font-size: 0.78rem; color: var(--warning); background: rgba(234, 179, 8, 0.1); padding: 6px; border-radius: 6px; border-left: 3px solid var(--warning); margin-top: 4px; }
+
+    .kds-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .btn-action-kds { border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; width: 100%; transition: opacity 0.2s; }
+    .btn-action-kds:hover { opacity: 0.9; }
+
+    .btn-start { background: var(--info); color: #000; }
+    .btn-ready { background: var(--success); color: white; }
+    .btn-finish { background: var(--primary); color: white; }
+    .btn-print { background: var(--border); color: var(--text-main); }
+    .btn-cancel { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 25px; width: 100%; max-width: 440px; }
+    .btn-modal-primary { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.9rem; }
+    .btn-modal-danger { background: var(--danger); color: white; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.9rem; }
+    .btn-modal-secondary { background: var(--border); color: var(--text-main); width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 0.9rem; }
+
+    .cancel-reason-select, .cancel-reason-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 8px; font-size: 0.88rem; margin-top: 8px; outline: none; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px; height: auto; overflow-y: auto; }
+      .kds-scroll-container { overflow-y: visible; height: auto; }
+      .toggle-btn { display: block; }
+      .search-kds-input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link active"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>KDS - Monitor da Cozinha</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <div class="kds-controls-bar">
+      <div class="filter-tabs" id="filterTabsContainer">
+        <button class="tab-btn active" onclick="setFilter('all', this)">📋 Todos (<span id="countAll">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('new', this)">🟡 Novos (<span id="countNew">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('preparing', this)">🔵 Preparo (<span id="countPrep">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('ready', this)">🟢 Prontos (<span id="countReady">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('finished', this)">🏁 Finalizados (<span id="countFin">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('cancelled', this)">🔴 Cancelados (<span id="countCanc">0</span>)</button>
+      </div>
+
+      <div>
+        <input type="text" id="searchKdsInput" class="search-kds-input" placeholder="🔍 Buscar pedido ou cliente..." oninput="renderKds()">
+      </div>
+    </div>
+
+    <div class="kds-scroll-container">
+      <div class="kds-grid" id="kdsContainer"></div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="confirmCancelModal">
+    <div class="custom-modal-card">
+      <div style="text-align:center; font-size:2.5rem; margin-bottom:10px;">⚠️</div>
+      <div style="text-align:center; font-size:1.2rem; font-weight:bold; margin-bottom:8px;">Cancelar Pedido</div>
+      <div style="text-align:center; font-size:0.88rem; color:var(--text-muted); margin-bottom:15px;" id="confirmCancelText">
+        Tem certeza que deseja cancelar o pedido?
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.78rem; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Selecione o motivo:</label>
+        <select id="cancelReasonSelect" class="cancel-reason-select" onchange="checkCustomReason(this)">
+          <option value="Cliente desistiu">Cliente desistiu</option>
+          <option value="Falta de ingredientes">Falta de ingredientes</option>
+          <option value="Problema na cozinha">Problema na cozinha</option>
+          <option value="Problema na entrega">Problema na entrega</option>
+          <option value="Pagamento não confirmado">Pagamento não confirmado</option>
+          <option value="Pedido duplicado">Pedido duplicado</option>
+          <option value="Erro no pedido">Erro no pedido</option>
+          <option value="Outro motivo">Outro motivo...</option>
+        </select>
+        <input type="text" id="cancelReasonCustomInput" class="cancel-reason-input" placeholder="Descreva o motivo..." style="display:none;">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn-modal-secondary" onclick="closeConfirmCancelModal()">Voltar</button>
+        <button class="btn-modal-danger" id="btnConfirmCancelAction">Sim, Cancelar Pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="noticeModal">
+    <div class="custom-modal-card" style="text-align:center;">
+      <div style="font-size:3rem; margin-bottom:12px;" id="noticeIcon">🎉</div>
+      <div style="font-size:1.25rem; font-weight:bold; margin-bottom:10px;" id="noticeTitle">Sucesso!</div>
+      <div style="font-size:0.88rem; color:var(--text-muted); margin-bottom:20px;" id="noticeDesc">Ação realizada.</div>
+      <button class="btn-modal-primary" onclick="closeNoticeModal()">Entendido</button>
+    </div>
+  </div>
+
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    let activeFilter = 'all';
+    let pendingCancelOrderId = null;
+    let lastKnownNewOrdersCount = -1;
+    let isRefreshingKds = false;
+
+    function playNewOrderSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
+
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.5);
+      } catch (e) {}
+    }
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    async function loadStoreSettings() {
+      applyTheme();
+      let storeName = 'MEU ESTABELECIMENTO';
+      let logoUrl = localStorage.getItem('vortex_store_logo') || '';
+
+      try {
+        const localSettings = JSON.parse(localStorage.getItem('vortex_store_settings')) || JSON.parse(localStorage.getItem('vortex_config')) || {};
+        storeName = localSettings.storeName || localSettings.store_name || localSettings.nome || localSettings.name || storeName;
+      } catch(e) {}
+
+      if (typeof dbFetchStoreSettings === 'function') {
+        try {
+          const res = await dbFetchStoreSettings();
+          if (res) {
+            storeName = res.store_name || res.storeName || res.nome || res.name || storeName;
+          }
+        } catch(e) {}
+      }
+
+      document.getElementById('sidebarStoreName').innerText = storeName;
+      const sidebarLogo = document.getElementById('sidebarStoreLogo');
+      if (logoUrl) {
+        sidebarLogo.src = logoUrl;
+        sidebarLogo.style.display = 'block';
+      } else {
+        sidebarLogo.style.display = 'none';
+      }
+    }
+
+    function setFilter(filter, btn) {
+      activeFilter = filter;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderKds();
+    }
+
+    function getLocalDateStr(dateObj) {
+      const d = dateObj || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseToLocalDateStr(rawDate) {
+      if (!rawDate) return '';
+      if (typeof rawDate === 'string') {
+        const cleanStr = rawDate.split('T')[0].split(' ')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+          return cleanStr;
+        }
+      }
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        return getLocalDateStr(d);
+      }
+      return '';
+    }
+
+    async function refreshKdsData() {
+      if (isRefreshingKds) return;
+      isRefreshingKds = true;
+
+      try {
+        let remoteKds = [];
+        if (typeof dbFetchKdsOrdersResult === 'function') {
+          const kdsRes = await dbFetchKdsOrdersResult();
+          if (kdsRes && kdsRes.data) remoteKds = kdsRes.data;
+        } else if (window.supabaseClient) {
+          const { data } = await window.supabaseClient.from('vortex_kds_orders').select('*');
+          if (data) remoteKds = data;
+        }
+
+        if (remoteKds && remoteKds.length > 0) {
+          let localOrders = [];
+          try {
+            localOrders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+          } catch(e) { localOrders = []; }
+
+          let localMap = new Map(localOrders.map(o => [String(o.id), o]));
+          remoteKds.forEach(r => {
+            let localItem = localMap.get(String(r.id));
+            if (localItem) {
+              const finalDisplayId = r.displayId || r.displayid || localItem.displayId || localItem.displayid;
+
+              localMap.set(String(r.id), { 
+                ...localItem,
+                ...r, 
+                displayId: finalDisplayId, 
+                status: localItem.status || r.status 
+              });
+            } else {
+              const finalDisplayId = r.displayId || r.displayid;
+              localMap.set(String(r.id), {
+                ...r,
+                displayId: finalDisplayId
+              });
+            }
+          });
+
+          localStorage.setItem('vortex_kds_orders', JSON.stringify(Array.from(localMap.values())));
+        }
+      } catch (e) {
+        console.warn('Modo offline ativo ou falha ao buscar da nuvem:', e);
+      } finally {
+        isRefreshingKds = false;
+        renderKds();
+      }
+    }
+
+    function renderKds() {
+      loadStoreSettings();
+
+      const todayDateStr = getLocalDateStr(new Date());
+      let orders = [];
+      try {
+        orders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      } catch (e) {
+        orders = [];
+      }
+
+      orders = orders.filter(o => {
+        let itemDate = parseToLocalDateStr(o.date) || todayDateStr;
+        if (o.status === 'finished' || o.status === 'completed' || o.status === 'cancelled') {
+          return itemDate === todayDateStr;
+        }
+        return true;
+      });
+
+      const countNew = orders.filter(o => o.status === 'new' || o.status === 'received').length;
+      const countPrep = orders.filter(o => o.status === 'preparing').length;
+      const countReady = orders.filter(o => o.status === 'ready').length;
+      const countFin = orders.filter(o => o.status === 'finished' || o.status === 'completed').length;
+      const countCanc = orders.filter(o => o.status === 'cancelled').length;
+
+      document.getElementById('countAll').innerText = orders.length;
+      document.getElementById('countNew').innerText = countNew;
+      document.getElementById('countPrep').innerText = countPrep;
+      document.getElementById('countReady').innerText = countReady;
+      document.getElementById('countFin').innerText = countFin;
+      document.getElementById('countCanc').innerText = countCanc;
+
+      if (lastKnownNewOrdersCount !== -1 && countNew > lastKnownNewOrdersCount) {
+        playNewOrderSound();
+      }
+      lastKnownNewOrdersCount = countNew;
+
+      const container = document.getElementById('kdsContainer');
+      container.innerHTML = '';
+
+      let filteredOrders = orders;
+      if (activeFilter === 'new') {
+        filteredOrders = orders.filter(o => o.status === 'new' || o.status === 'received');
+      } else if (activeFilter === 'finished') {
+        filteredOrders = orders.filter(o => o.status === 'finished' || o.status === 'completed');
+      } else if (activeFilter !== 'all') {
+        filteredOrders = orders.filter(o => o.status === activeFilter);
+      }
+
+      const searchTerm = document.getElementById('searchKdsInput')?.value.trim().toLowerCase() || '';
+      if (searchTerm) {
+        filteredOrders = filteredOrders.filter(o => 
+          String(o.displayId || o.id).toLowerCase().includes(searchTerm) || 
+          String(o.id).toLowerCase().includes(searchTerm) || 
+          String(o.client || '').toLowerCase().includes(searchTerm)
+        );
+      }
+
+      if (filteredOrders.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px; font-weight: bold;">
+            Nenhum pedido encontrado nesta seção.
+          </div>
+        `;
+        return;
+      }
+
+      let cardsHtml = '';
+      filteredOrders.forEach(order => {
+        let visibleDisplayId = order.displayId || order.id;
+        let statusClass = `status-${order.status || 'received'}`;
+        let statusLabel = '';
+        if (order.status === 'new' || order.status === 'received') statusLabel = '🟡 NOVO';
+        else if (order.status === 'preparing') statusLabel = '🔵 EM PREPARO';
+        else if (order.status === 'ready') statusLabel = '🟢 PRONTO';
+        else if (order.status === 'finished' || order.status === 'completed') statusLabel = '🏁 FINALIZADO';
+        else if (order.status === 'cancelled') statusLabel = '🔴 CANCELADO';
+
+        let itemsHtml = (order.items || []).map(i => `
+          <div class="item-row">
+            <span>${i.qty || i.quantity || 1}x ${i.name || i.title || 'Item'}</span>
+            <span>R$ ${(((i.price || 0) * (i.qty || i.quantity || 1))).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+          </div>
+        `).join('');
+
+        let obsHtml = order.observation ? `<div class="order-obs">📝 <strong>Obs:</strong> ${order.observation}</div>` : '';
+        let cancelInfoHtml = (order.status === 'cancelled' && order.cancellationReason) ? `<div style="font-size:0.75rem; color:var(--danger); margin-top:4px;">Motivo: ${order.cancellationReason}</div>` : '';
+        
+        const isTableOrder = String(order.origin || '').toLowerCase().includes('mesa');
+        let isCancelled = order.status === 'cancelled';
+        let isFinished = order.status === 'finished' || order.status === 'completed';
+
+        let actionsHtml = '';
+        if (!isCancelled && !isFinished) {
+          if (order.status === 'new' || order.status === 'received') {
+            actionsHtml += `<button class="btn-action-kds btn-start" onclick="updateOrderStatus('${order.id}', 'preparing')">👨‍🍳 Iniciar Preparo</button>`;
+          } else if (order.status === 'preparing') {
+            actionsHtml += `<button class="btn-action-kds btn-ready" onclick="updateOrderStatus('${order.id}', 'ready')">✅ Marcar como Pronto</button>`;
+          } else if (order.status === 'ready' && !isTableOrder) {
+            actionsHtml += `<button class="btn-action-kds btn-finish" onclick="updateOrderStatus('${order.id}', 'finished')">🎯 Finalizar / Entregar</button>`;
+          }
+          actionsHtml += `<button class="btn-action-kds btn-print" onclick="printOrderTicket('${order.id}')">🖨️ Imprimir Comanda</button>`;
+          actionsHtml += `<button class="btn-action-kds btn-cancel" onclick="askCancelOrder('${order.id}')">❌ Cancelar Pedido</button>`;
+        } else {
+          actionsHtml = `<button class="btn-action-kds btn-print" onclick="printOrderTicket('${order.id}')">🖨️ Imprimir Comanda</button>`;
+        }
+
+        cardsHtml += `
+          <div class="kds-card ${statusClass}">
+            <div>
+              <div class="kds-card-header">
+                <span class="order-id-tag">#${visibleDisplayId}</span>
+                <span class="order-origin">${order.origin || 'Balcão'}</span>
+              </div>
+              <div class="order-client">👤 ${order.client || 'Cliente'}</div>
+              <div class="order-time">🕒 ${order.time || '--:--'} | <strong>${statusLabel}</strong></div>
+              ${cancelInfoHtml}
+              <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+              
+              <div class="items-list">${itemsHtml}</div>
+              ${obsHtml}
+              
+              <div style="font-weight:bold; font-size:0.9rem; margin-top:10px; color:var(--success);">
+                Total: R$ ${(order.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+              </div>
+            </div>
+
+            <div class="kds-actions">${actionsHtml}</div>
+          </div>
+        `;
+      });
+      container.innerHTML = cardsHtml;
+    }
+
+    async function updateOrderStatus(id, newStatus) {
+      let orders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      let order = orders.find(o => String(o.id) === String(id));
+
+      if (order) {
+        order.status = newStatus;
+        localStorage.setItem('vortex_kds_orders', JSON.stringify(orders));
+
+        renderKds();
+
+        try {
+          if (typeof processStockConsumptionForOrder === 'function' && newStatus === 'preparing') {
+            await processStockConsumptionForOrder(order);
+          }
+          if (window.supabaseClient) {
+            await window.supabaseClient.from('vortex_kds_orders').update({ status: newStatus }).eq('id', String(id));
+          }
+        } catch (e) {
+          console.warn('Erro ao sincronizar status na nuvem:', e);
+        }
+
+        let visibleDisplayId = order.displayId || id;
+        let noticeMsg = `Pedido #${visibleDisplayId} atualizado com sucesso.`;
+        showNoticeModal('Atualização do Pedido', noticeMsg, '👨‍🍳');
+      }
+    }
+
+    function askCancelOrder(id) {
+      pendingCancelOrderId = id;
+      let orders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      let order = orders.find(o => String(o.id) === String(id));
+      let visibleDisplayId = order ? (order.displayId || id) : id;
+
+      document.getElementById('confirmCancelText').innerHTML = `Tem certeza que deseja cancelar o <strong>Pedido #${visibleDisplayId}</strong>?`;
+      document.getElementById('cancelReasonSelect').value = 'Cliente desistiu';
+      document.getElementById('cancelReasonCustomInput').style.display = 'none';
+      document.getElementById('cancelReasonCustomInput').value = '';
+
+      const btnConfirm = document.getElementById('btnConfirmCancelAction');
+      btnConfirm.onclick = function() {
+        confirmCancelOrder(id);
+      };
+
+      document.getElementById('confirmCancelModal').classList.add('active');
+    }
+
+    function checkCustomReason(selectEl) {
+      const customInput = document.getElementById('cancelReasonCustomInput');
+      if (selectEl.value === 'Outro motivo') {
+        customInput.style.display = 'block';
+        customInput.focus();
+      } else {
+        customInput.style.display = 'none';
+        customInput.value = '';
+      }
+    }
+
+    function closeConfirmCancelModal() {
+      pendingCancelOrderId = null;
+      document.getElementById('confirmCancelModal').classList.remove('active');
+    }
+
+    async function confirmCancelOrder(id) {
+      const selectEl = document.getElementById('cancelReasonSelect');
+      const customInput = document.getElementById('cancelReasonCustomInput');
+      let reason = selectEl.value;
+      if (reason === 'Outro motivo') {
+        reason = customInput.value.trim() || 'Outro motivo (não especificado)';
+      }
+
+      closeConfirmCancelModal();
+
+      let orders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      let order = orders.find(o => String(o.id) === String(id));
+      let visibleDisplayId = order ? (order.displayId || id) : id;
+
+      if (order) {
+        order.status = 'cancelled';
+        order.cancellationReason = reason;
+        localStorage.setItem('vortex_kds_orders', JSON.stringify(orders));
+      }
+
+      try {
+        if (typeof dbCancelOrder === 'function') {
+          await dbCancelOrder(id, reason);
+        } else if (window.supabaseClient) {
+          await window.supabaseClient.from('vortex_kds_orders').update({ status: 'cancelled', cancellation_reason: reason }).eq('id', String(id));
+        }
+      } catch (e) {}
+
+      renderKds();
+      showNoticeModal('Pedido Cancelado', `Pedido #${visibleDisplayId} foi cancelado com sucesso.`, '🔴');
+      refreshKdsData();
+    }
+
+    function printOrderTicket(id) {
+      let orders = JSON.parse(localStorage.getItem('vortex_kds_orders')) || [];
+      let order = orders.find(o => String(o.id) === String(id));
+      if (!order) return;
+
+      let visibleDisplayId = order.displayId || order.id;
+      const printWin = window.open('', '_blank', 'width=380,height=600');
+      let itemsTxt = (order.items || []).map(i => `
+        <tr>
+          <td style="text-align:left;">${i.qty || i.quantity || 1}x ${i.name || i.title || 'Item'}</td>
+          <td style="text-align:right;">R$ ${(((i.price || 0) * (i.qty || i.quantity || 1))).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+        </tr>
+      `).join('');
+
+      printWin.document.write(`
+        <html>
+          <head><title>Comanda - Pedido #${visibleDisplayId}</title></head>
+          <body style="font-family:monospace; font-size:12px; width:280px; padding:10px; margin:0 auto;">
+            <h2 style="text-align:center; margin:0;">${document.getElementById('sidebarStoreName').innerText}</h2>
+            <p style="text-align:center; margin:4px 0 10px 0;">COMANDA DE PRODUÇÃO</p>
+            <hr>
+            <p><strong>PEDIDO #${visibleDisplayId}</strong></p>
+            <p>Origem: ${order.origin || 'Balcão'}</p>
+            <p>Cliente: ${order.client || 'Cliente'}</p>
+            <p>Data: ${order.date || new Date().toLocaleDateString('pt-BR')} | Horário: ${order.time || '--:--'}</p>
+            <hr>
+            <table style="width:100%; border-collapse:collapse;">
+              ${itemsTxt}
+            </table>
+            ${order.observation ? `<hr><p><strong>OBS:</strong> ${order.observation}</p>` : ''}
+            <hr>
+            <p style="text-align:right; font-size:14px;"><strong>TOTAL: R$ ${(order.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></p>
+            <p style="text-align:center; margin-top:20px;">🌪️ Vortex Food System</p>
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
+
+    function showNoticeModal(title, desc, icon) {
+      document.getElementById('noticeIcon').innerText = icon || '🎉';
+      document.getElementById('noticeTitle').innerText = title;
+      document.getElementById('noticeDesc').textContent = desc;
+      document.getElementById('noticeModal').classList.add('active');
+    }
+
+    function closeNoticeModal() {
+      document.getElementById('noticeModal').classList.remove('active');
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    setInterval(() => {
+      refreshKdsData();
+    }, 8000);
+
+    window.onload = function() {
+      renderKds();
+      refreshKdsData();
+    };
+  </script>
+</body>
+</html>

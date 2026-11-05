@@ -1,0 +1,16 @@
+{
+  "name": "vortex-teste2",
+  "version": "1.0.0",
+  "main": "index.html",
+  "scripts": {
+    "start": "node index.html"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

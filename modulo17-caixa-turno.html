@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Food - Fechamento de Caixa & Turnos</title>
+  <!-- SDK do Supabase e Conexão Central -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --border: #334155;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #eab308;
+      --info: #38bdf8;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-main); color: var(--text-main);
+      display: flex; min-height: 100vh; overflow-x: hidden; transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 99;
+    }
+
+    .sidebar {
+      width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+      z-index: 100; overflow-y: auto; transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+
+    .store-brand {
+      display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800;
+      color: var(--text-main); text-transform: uppercase; letter-spacing: 0.03em; word-break: break-word; max-width: 190px;
+    }
+
+    .store-brand-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; display: none; }
+
+    .close-sidebar-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .sidebar-nav { padding: 15px 10px; flex: 1; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 10px 8px; display: block; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 0.90rem; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background-color: rgba(249, 115, 22, 0.15); color: var(--primary); }
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(0,0,0,0.1);
+    }
+
+    .main-content { flex: 1; margin-left: 260px; padding: 20px; width: calc(100% - 260px); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .toggle-btn { display: none; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+
+    /* CARDS & ESTRUTURA */
+    .card-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .metric-label { font-size: 0.8rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+    .metric-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); }
+
+    /* FORMULÁRIO E INPUTS */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-bottom: 4px; }
+    .form-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 12px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+
+    .btn-action { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-action:hover { background: var(--primary-hover); }
+
+    .btn-secondary { background: var(--border); color: var(--text-main); border: none; padding: 9px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+    .btn-danger { background: var(--danger); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+    .btn-success { background: var(--success); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+
+    /* TABELAS COM ROLAGEM INDEPENDENTE (MÁX 280PX) */
+    .table-container { width: 100%; overflow-x: auto; max-height: 280px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; background: var(--bg-main); position: sticky; top: 0; z-index: 10; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .custom-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .close-sidebar-btn { display: block; }
+      .main-content { margin-left: 0; width: 100%; padding: 15px 15px 80px 15px; }
+      .toggle-btn { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="store-brand">
+        <img id="sidebarStoreLogo" src="" alt="Logo" class="store-brand-logo">
+        <span id="sidebarStoreName">MEU ESTABELECIMENTO</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleMenu()">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-title">OPERACIONAL</span>
+        <a href="index.html" class="nav-link"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a>
+        <a href="modulo3-pdv.html" class="nav-link"><span class="nav-icon">💻</span><span class="nav-text">PDV / Caixa</span></a>
+        <a href="modulo5-mesas.html" class="nav-link"><span class="nav-icon">🍽️</span><span class="nav-text">Mesas & Comandas</span></a>
+        <a href="modulo21-delivery.html" class="nav-link"><span class="nav-icon">🛵</span><span class="nav-text">Delivery & Entregas</span></a>
+        <a href="modulo7-8-kds-pedidos.html" class="nav-link"><span class="nav-icon">👨‍🍳</span><span class="nav-text">KDS / Cozinha</span></a>
+        <a href="modulo-integracoes.html" class="nav-link"><span class="nav-icon">🔗</span><span class="nav-text">Integrações Delivery</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">PRODUTOS & PROMOÇÕES</span>
+        <a href="modulo2-cardapio.html" class="nav-link"><span class="nav-icon">📋</span><span class="nav-text">Cardápio & Produtos</span></a>
+        <a href="modulo13-fichas-tecnicas.html" class="nav-link"><span class="nav-icon">📖</span><span class="nav-text">Fichas Técnicas</span></a>
+        <a href="modulo-cupons.html" class="nav-link"><span class="nav-icon">🏷️</span><span class="nav-text">Cupons & Promoções</span></a>
+        <a href="modulo-fidelidade.html" class="nav-link"><span class="nav-icon">⭐</span><span class="nav-text">Fidelidade / Cashback</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">SUPRIMENTOS & CLIENTES</span>
+        <a href="modulo12-estoque.html" class="nav-link"><span class="nav-icon">📦</span><span class="nav-text">Estoque & Insumos</span></a>
+        <a href="modulo14-compras.html" class="nav-link"><span class="nav-icon">🛒</span><span class="nav-text">Compras & Cotações</span></a>
+        <a href="modulo18-crm.html" class="nav-link"><span class="nav-icon">👥</span><span class="nav-text">CRM & Clientes</span></a>
+        <a href="modulo-marketing.html" class="nav-link"><span class="nav-icon">💡</span><span class="nav-text">Ideias de Marketing</span></a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-title">ADMINISTRAÇÃO</span>
+        <a href="modulo17-caixa-turno.html" class="nav-link active"><span class="nav-icon">🔒</span><span class="nav-text">Fechamento de Caixa</span></a>
+        <a href="modulo15-financeiro.html" class="nav-link"><span class="nav-icon">💰</span><span class="nav-text">Financeiro & DRE</span></a>
+        <a href="modulo16-contas.html" class="nav-link"><span class="nav-icon">📄</span><span class="nav-text">Contas Pagar/Receber</span></a>
+        <a href="modulo9-equipe.html" class="nav-link"><span class="nav-icon">👔</span><span class="nav-text">Equipe & Permissões</span></a>
+        <a href="modulo19-fiscal.html" class="nav-link"><span class="nav-icon">🧾</span><span class="nav-text">Emissão Fiscal</span></a>
+        <a href="modulo10-relatorios.html" class="nav-link"><span class="nav-icon">📈</span><span class="nav-text">Relatórios</span></a>
+        <a href="modulo-configuracoes.html" class="nav-link"><span class="nav-icon">⚙️</span><span class="nav-text">Configurações</span></a>
+        <a href="modulo-impressoras.html" class="nav-link"><span class="nav-icon">🖨️</span><span class="nav-text">Impressoras & Bluetooth</span></a>
+        <a href="modulo-suporte.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-text">Suporte & Ajuda</span></a>
+        <a href="modulo-mensalidade.html" class="nav-link"><span class="nav-icon">💳</span><span class="nav-text">Pagamento Mensalidade</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>🌪️</span>
+      <span>VORTEX <strong>FOOD</strong></span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <div class="header-left">
+        <button class="toggle-btn" onclick="toggleMenu()">☰</button>
+        <h1>Controle de Caixa & Turnos</h1>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        🕒 <span id="currentTimeHeader">--:--:--</span>
+      </div>
+    </header>
+
+    <!-- STATUS DO CAIXA ATUAL -->
+    <div class="grid-3">
+      <div class="metric-card">
+        <span class="metric-label">Status do Caixa</span>
+        <span class="metric-value" id="cashStatusBadge" style="color: var(--danger);">🔴 FECHADO</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Operador Responsável</span>
+        <span class="metric-value" id="cashOperator">--</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Saldo Inicial (Troco)</span>
+        <span class="metric-value" id="cashInitialBalance">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- PAINEL DE VALORES DO TURNO -->
+    <div class="grid-3">
+      <div class="metric-card">
+        <span class="metric-label">Vendas em Dinheiro</span>
+        <span class="metric-value" style="color: var(--success);" id="salesCash">R$ 0,00</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Vendas em Pix / Cartão</span>
+        <span class="metric-value" style="color: var(--info);" id="salesDigital">R$ 0,00</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Sangrias & Despesas</span>
+        <span class="metric-value" style="color: var(--danger);" id="cashWithdrawals">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO RÁPIDA -->
+    <div class="card-box" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;" id="cashActionsContainer">
+      <button class="btn-success" id="btnOpenCash" onclick="openOpenCashModal()">🔓 Abrir Caixa / Iniciar Turno</button>
+      
+      <div id="activeCashButtons" style="display: none; gap: 10px; flex-wrap: wrap; width: 100%;">
+        <button class="btn-action" onclick="openMovementModal('suprimento')">➕ Registrar Suprimento (Reforço)</button>
+        <button class="btn-action" style="background: var(--warning); color: #000;" onclick="openMovementModal('sangria')">➖ Registrar Sangria (Retirada)</button>
+        <button class="btn-action" style="background: var(--info);" onclick="openMovementModal('despesa')">🏷️ Pagar Despesa do Caixa</button>
+        <button class="btn-secondary" style="background: #475569; color: #fff;" onclick="openMovementModal('ajuste')">⚖️ Registrar Ajuste / Correção</button>
+        <button class="btn-danger" style="margin-left: auto;" onclick="openCloseCashModal()">🔒 Fechar Caixa / Turno</button>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO DE MOVIMENTAÇÕES DO TURNO (COM ROLAGEM INDEPENDENTE) -->
+    <div class="card-box">
+      <div class="card-title">📋 Movimentações do Turno Atual</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Tipo</th>
+              <th>Descrição / Justificativa</th>
+              <th>Valor</th>
+              <th>Operador</th>
+            </tr>
+          </thead>
+          <tbody id="movementsTableBody">
+            <tr id="emptyMovementsRow">
+              <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                Nenhum caixa aberto ou movimentação registrada no turno atual.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO DE TURNOS ANTERIORES (COM ROLAGEM INDEPENDENTE) -->
+    <div class="card-box">
+      <div class="card-title">📜 Histórico de Turnos e Caixas Anteriores</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Turno</th>
+              <th>Operador</th>
+              <th>Abertura</th>
+              <th>Fechamento</th>
+              <th>Troco Inicial</th>
+              <th>Valor Contado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="closedShiftsTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px;">
+                Nenhum turno anterior registrado.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL DE ABERTURA DE CAIXA -->
+  <div class="modal-overlay" id="openCashModal">
+    <div class="custom-modal-card">
+      <div class="card-title">🔓 Abertura de Caixa</div>
+      <div class="form-group">
+        <label>Nome do Operador:*</label>
+        <input type="text" class="form-input" id="openOperatorName" placeholder="Ex: João Silva">
+      </div>
+      <div class="form-group">
+        <label>Valor do Troco Inicial (R$):*</label>
+        <input type="text" class="form-input" id="openInitialBalance" placeholder="0,00" oninput="maskCurrency(this)">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="closeOpenCashModal()">Cancelar</button>
+        <button class="btn-action" style="flex: 1; background: var(--success);" onclick="confirmOpenCash()">Abrir Caixa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE MOVIMENTAÇÃO (SUPRIMENTO / SANGRIA / DESPESA / AJUSTE) -->
+  <div class="modal-overlay" id="movementModal">
+    <div class="custom-modal-card">
+      <div class="card-title" id="movementModalTitle">Registrar Movimentação</div>
+      <div class="form-group" id="groupAdjustmentType" style="display:none;">
+        <label>Tipo de Ajuste:*</label>
+        <select class="form-input" id="adjustmentDirection">
+          <option value="positivo">Ajuste Positivo (Entrada / Sobra corrigida)</option>
+          <option value="negativo">Ajuste Negativo (Saída / Falta corrigida)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor (R$):*</label>
+        <input type="text" class="form-input" id="movValue" placeholder="0,00" oninput="maskCurrency(this)">
+      </div>
+      <div class="form-group">
+        <label>Justificativa do Erro / Motivo:*</label>
+        <textarea class="form-input" id="movReason" rows="3" placeholder="Descreva detalhadamente o motivo da correção..."></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="closeMovementModal()">Cancelar</button>
+        <button class="btn-action" style="flex: 1;" onclick="confirmMovement()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE FECHAMENTO DE CAIXA -->
+  <div class="modal-overlay" id="closeCashModal">
+    <div class="custom-modal-card">
+      <div class="card-title">🔒 Fechamento de Caixa & Conferência</div>
+      <div class="form-group">
+        <label>Dinheiro Esperado em Caixa:</label>
+        <input type="text" class="form-input" id="expectedCash" value="R$ 0,00" disabled>
+      </div>
+      <div class="form-group">
+        <label>Dinheiro Informado (Contagem Física):*</label>
+        <input type="text" class="form-input" id="countedCash" placeholder="0,00" oninput="maskCurrency(this)">
+      </div>
+      <div class="form-group">
+        <label>Justificativa (Se houver divergência):</label>
+        <textarea class="form-input" id="closeReason" rows="2" placeholder="Opcional se os valores baterem..."></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="closeCloseCashModal()">Cancelar</button>
+        <button class="btn-action" style="flex: 1; background: var(--success);" onclick="finalizeCashClose()">Finalizar Fechamento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ALERTA -->
+  <div class="modal-overlay" id="customAlertModal">
+    <div class="custom-modal-card" style="text-align: center; max-width: 380px;">
+      <div style="font-size: 2.8rem; margin-bottom: 10px;" id="alertIcon">⚠️</div>
+      <div style="font-size: 1.15rem; font-weight: bold; margin-bottom: 8px;" id="alertTitle">Atenção</div>
+      <div style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.4;" id="alertMessage">Preencha os campos.</div>
+      <button class="btn-action" onclick="closeCustomAlert()" style="width: 100%; justify-content: center;">Entendido</button>
+    </div>
+  </div>
+
+  <script>
+    let currentMovementType = '';
+    let currentCashData = {
+      shiftId: null,
+      isOpen: false,
+      operator: '',
+      openedAt: null,
+      initialBalance: 0,
+      salesCash: 0,
+      salesDigital: 0,
+      withdrawals: 0,
+      movements: []
+    };
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function applyTheme() {
+      if (localStorage.getItem('vortex_theme') === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+
+    function showCustomAlert(title, message, icon = '⚠️') {
+      document.getElementById('alertIcon').innerText = icon;
+      document.getElementById('alertTitle').innerText = title;
+      document.getElementById('alertMessage').innerText = message;
+      document.getElementById('customAlertModal').classList.add('active');
+    }
+
+    function closeCustomAlert() {
+      document.getElementById('customAlertModal').classList.remove('active');
+    }
+
+    function parseCurrencyToFloat(str) {
+      if (!str) return 0;
+      let clean = String(str).replace(/[^\d,]/g, '').replace(',', '.');
+      return parseFloat(clean) || 0;
+    }
+
+    function maskCurrency(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (!v) { input.value = ''; return; }
+      let numeric = parseFloat(v) / 100;
+      input.value = numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    async function loadSalesForActiveShift(openedAt) {
+      let cCash = 0;
+      let cDigital = 0;
+      const openedTime = new Date(openedAt).getTime();
+
+      let allSales = [];
+      if (typeof dbFetchSales === 'function') {
+        allSales = await dbFetchSales();
+      } else if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) {
+        try {
+          const { data } = await window.supabaseClient.from('vortex_sales_history').select('*');
+          if (data) allSales = data;
+        } catch(e) {}
+      }
+
+      const rawLocal = localStorage.getItem('vortex_sales_history');
+      if (rawLocal) {
+        try {
+          const localList = JSON.parse(rawLocal);
+          if (Array.isArray(localList)) {
+            localList.forEach(localItem => {
+              if (!allSales.some(s => String(s.id) === String(localItem.id))) {
+                allSales.push(localItem);
+              }
+            });
+          }
+        } catch(e) {}
+      }
+
+      allSales.forEach(order => {
+        if (order.status === 'cancelled') return;
+
+        const dateStr = order.date || new Date().toISOString().split('T')[0];
+        const timeStr = order.time || '00:00';
+        const orderTimestamp = new Date(`${dateStr}T${timeStr}:00`).getTime();
+
+        if (orderTimestamp >= openedTime || order.date >= openedAt.split('T')[0]) {
+          const total = parseFloat(order.total || order.valor || order.subtotal || 0);
+          const payMethod = String(order.payMethod || order.payment || order.paymentMethod || order.forma_pagamento || '').toLowerCase();
+
+          if (payMethod.includes('dinheiro') || payMethod.includes('cash') || payMethod.includes('especie')) {
+            cCash += total;
+          } else {
+            cDigital += total;
+          }
+        }
+      });
+
+      currentCashData.salesCash = cCash;
+      currentCashData.salesDigital = cDigital;
+    }
+
+    async function checkActiveShiftFromSupabase() {
+      let loadedFromSupabase = false;
+      const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+
+      if (client) {
+        try {
+          const { data } = await client
+            .from('cash_shifts')
+            .select('*')
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1);
+
+          if (data && data.length > 0) {
+            const shift = data[0];
+            currentCashData = {
+              shiftId: shift.id,
+              isOpen: true,
+              operator: shift.operator,
+              openedAt: shift.opened_at,
+              initialBalance: parseFloat(shift.initial_balance || 0),
+              salesCash: 0,
+              salesDigital: 0,
+              withdrawals: 0,
+              movements: shift.movements || []
+            };
+
+            let totalWithdrawn = 0;
+            currentCashData.movements.forEach(m => {
+              if (m.type === 'SANGRIA' || m.type === 'DESPESA' || m.type === 'AJUSTE (-)') {
+                totalWithdrawn += parseFloat(m.val || 0);
+              }
+            });
+            currentCashData.withdrawals = totalWithdrawn;
+            loadedFromSupabase = true;
+          }
+        } catch (err) {
+          console.error('Erro ao buscar turno no Supabase:', err);
+        }
+      }
+
+      if (!loadedFromSupabase) {
+        loadCurrentCashState();
+      }
+
+      if (currentCashData.isOpen && currentCashData.openedAt) {
+        await loadSalesForActiveShift(currentCashData.openedAt);
+      }
+
+      renderCashState();
+      loadClosedShiftsHistory();
+    }
+
+    function openOpenCashModal() {
+      document.getElementById('openOperatorName').value = '';
+      document.getElementById('openInitialBalance').value = '';
+      document.getElementById('openCashModal').classList.add('active');
+    }
+
+    function closeOpenCashModal() {
+      document.getElementById('openCashModal').classList.remove('active');
+    }
+
+    async function confirmOpenCash() {
+      const op = document.getElementById('openOperatorName').value.trim();
+      const balStr = document.getElementById('openInitialBalance').value;
+      const bal = parseCurrencyToFloat(balStr);
+
+      if (!op) {
+        showCustomAlert('Nome Obrigatório', 'Informe o nome do operador responsável pelo turno.', '⚠️');
+        return;
+      }
+
+      const openedTimeIso = new Date().toISOString();
+      const initialMovement = {
+        time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+        type: 'SALDO INICIAL',
+        reason: 'Abertura de caixa com troco inicial',
+        val: bal,
+        operator: op
+      };
+
+      currentCashData = {
+        shiftId: 'shift_' + Date.now(),
+        isOpen: true,
+        operator: op,
+        openedAt: openedTimeIso,
+        initialBalance: bal,
+        salesCash: 0,
+        salesDigital: 0,
+        withdrawals: 0,
+        movements: [initialMovement]
+      };
+
+      const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+      if (client) {
+        try {
+          const { data } = await client
+            .from('cash_shifts')
+            .insert([{
+              id: currentCashData.shiftId,
+              operator: op,
+              initial_balance: bal,
+              opened_at: openedTimeIso,
+              status: 'open',
+              movements: [initialMovement]
+            }])
+            .select();
+
+          if (data && data.length > 0) {
+            currentCashData.shiftId = data[0].id;
+          }
+        } catch (e) {
+          console.error('Erro ao salvar abertura no Supabase:', e);
+        }
+      }
+
+      saveCurrentCashState();
+      renderCashState();
+      closeOpenCashModal();
+      showCustomAlert('Caixa Aberto', `Turno iniciado com sucesso para ${op}!`, '🔓');
+    }
+
+    function openMovementModal(type) {
+      if (!currentCashData.isOpen) {
+        showCustomAlert('Caixa Fechado', 'Abra o caixa antes de registrar movimentações.', '⚠️');
+        return;
+      }
+      currentMovementType = type;
+      const titles = {
+        'suprimento': '➕ Registrar Suprimento (Reforço)',
+        'sangria': '➖ Registrar Sangria (Retirada)',
+        'despesa': '🏷️ Pagar Despesa do Caixa',
+        'ajuste': '⚖️ Registrar Ajuste / Correção'
+      };
+      document.getElementById('movementModalTitle').innerText = titles[type] || 'Movimentação';
+      
+      const groupAdj = document.getElementById('groupAdjustmentType');
+      if (type === 'ajuste') {
+        groupAdj.style.display = 'block';
+        document.getElementById('adjustmentDirection').value = 'positivo';
+      } else {
+        groupAdj.style.display = 'none';
+      }
+
+      document.getElementById('movValue').value = '';
+      document.getElementById('movReason').value = '';
+      document.getElementById('movementModal').classList.add('active');
+    }
+
+    function closeMovementModal() {
+      document.getElementById('movementModal').classList.remove('active');
+    }
+
+    async function confirmMovement() {
+      const valStr = document.getElementById('movValue').value;
+      const reason = document.getElementById('movReason').value.trim();
+      const numVal = parseCurrencyToFloat(valStr);
+
+      if (!valStr || numVal <= 0 || !reason) {
+        showCustomAlert('Campos Incompletos', 'Informe um valor válido e a justificativa da operação.', '⚠️');
+        return;
+      }
+
+      let typeLabel = currentMovementType.toUpperCase();
+      if (typeLabel === 'AJUSTE') {
+        const direction = document.getElementById('adjustmentDirection').value;
+        if (direction === 'negativo') {
+          typeLabel = 'AJUSTE (-)';
+          currentCashData.withdrawals += numVal;
+        } else {
+          typeLabel = 'AJUSTE (+)';
+        }
+      } else if (typeLabel === 'SANGRIA' || typeLabel === 'DESPESA') {
+        currentCashData.withdrawals += numVal;
+      }
+
+      const newMov = {
+        time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+        type: typeLabel,
+        reason: reason,
+        val: numVal,
+        operator: currentCashData.operator
+      };
+
+      currentCashData.movements.push(newMov);
+
+      // --- SINCRONIZAÇÃO OFICIAL COM O SUPABASE E FINANCEIRO ---
+      const entryId = 'cash_mov_' + Date.now();
+      const entryDate = new Date().toISOString().split('T')[0];
+      let financialType = 'expense';
+      let descriptiveText = `Caixa (${typeLabel}): ${reason}`;
+
+      if (typeLabel === 'DESPESA' || typeLabel === 'SANGRIA' || typeLabel === 'AJUSTE (-)') {
+        financialType = 'expense';
+      } else if (typeLabel === 'SUPRIMENTO' || typeLabel === 'AJUSTE (+)') {
+        financialType = 'income';
+      }
+
+      const financialPayload = {
+        id: entryId,
+        type: financialType,
+        description: descriptiveText,
+        value: numVal,
+        date: entryDate
+      };
+
+      // Grava no Supabase utilizando a função oficial de `supabase.js` com suporte a getSupabase()
+      if (typeof dbSaveFinancialEntry === 'function') {
+        await dbSaveFinancialEntry(financialPayload);
+      } else {
+        const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+        if (client) {
+          try {
+            await client.from('vortex_financial').upsert([financialPayload]);
+          } catch (e) {
+            console.warn('Erro ao salvar no Supabase:', e);
+          }
+        }
+      }
+
+      // Salva também localmente para suporte imediato e offline
+      try {
+        let localList = JSON.parse(localStorage.getItem('vortex_financial_entries') || '[]');
+        localList.unshift({
+          id: entryId,
+          type: financialType,
+          description: descriptiveText,
+          value: numVal,
+          date: entryDate,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('vortex_financial_entries', JSON.stringify(localList));
+      } catch(e) {}
+
+      const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+      if (client && currentCashData.shiftId) {
+        try {
+          await client
+            .from('cash_shifts')
+            .update({ movements: currentCashData.movements })
+            .eq('id', currentCashData.shiftId);
+        } catch (e) {
+          console.error('Erro ao atualizar movimentações no Supabase:', e);
+        }
+      }
+
+      saveCurrentCashState();
+      renderCashState();
+      closeMovementModal();
+      showCustomAlert('Sucesso', 'Movimentação registrada e integrada ao financeiro via Supabase!', '✅');
+    }
+
+    function openCloseCashModal() {
+      if (!currentCashData.isOpen) {
+        showCustomAlert('Caixa Fechado', 'O caixa já está encerrado.', '⚠️');
+        return;
+      }
+
+      let cashInFlow = currentCashData.initialBalance + currentCashData.salesCash;
+      currentCashData.movements.forEach(m => {
+        if (m.type === 'SUPRIMENTO' || m.type === 'AJUSTE (+)') {
+          cashInFlow += parseFloat(m.val || 0);
+        }
+      });
+      const expectedInCash = cashInFlow - currentCashData.withdrawals;
+
+      document.getElementById('expectedCash').value = `R$ ${expectedInCash.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      document.getElementById('countedCash').value = '';
+      document.getElementById('closeReason').value = '';
+      document.getElementById('closeCashModal').classList.add('active');
+    }
+
+    function closeCloseCashModal() {
+      document.getElementById('closeCashModal').classList.remove('active');
+    }
+
+    async function finalizeCashClose() {
+      const countedStr = document.getElementById('countedCash').value;
+      if (!countedStr) {
+        showCustomAlert('Contagem Obrigatória', 'Informe o valor contado fisicamente no caixa.', '⚠️');
+        return;
+      }
+
+      const closedTimeIso = new Date().toISOString();
+      const countedVal = parseCurrencyToFloat(countedStr);
+      const closeReasonText = document.getElementById('closeReason').value;
+
+      const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+      if (client && currentCashData.shiftId) {
+        try {
+          await client
+            .from('cash_shifts')
+            .update({
+              status: 'closed',
+              closed_at: closedTimeIso,
+              counted_cash: countedVal,
+              close_reason: closeReasonText,
+              movements: currentCashData.movements
+            })
+            .eq('id', currentCashData.shiftId);
+        } catch (e) {
+          console.error('Erro ao fechar turno no Supabase:', e);
+        }
+      }
+
+      let closedShifts = JSON.parse(localStorage.getItem('vortex_closed_shifts')) || [];
+      closedShifts.unshift({
+        shiftId: currentCashData.shiftId,
+        operator: currentCashData.operator,
+        openedAt: currentCashData.openedAt,
+        closedAt: closedTimeIso,
+        initialBalance: currentCashData.initialBalance,
+        countedCash: countedVal,
+        movements: currentCashData.movements
+      });
+      localStorage.setItem('vortex_closed_shifts', JSON.stringify(closedShifts));
+
+      currentCashData.isOpen = false;
+      saveCurrentCashState();
+      renderCashState();
+      loadClosedShiftsHistory();
+      closeCloseCashModal();
+      showCustomAlert('Caixa Fechado', 'O turno foi encerrado e auditado com sucesso no sistema!', '🔒');
+    }
+
+    function saveCurrentCashState() {
+      localStorage.setItem('vortex_current_cash', JSON.stringify(currentCashData));
+    }
+
+    function loadCurrentCashState() {
+      const saved = localStorage.getItem('vortex_current_cash');
+      if (saved) {
+        try {
+          currentCashData = JSON.parse(saved);
+        } catch(e) {}
+      }
+    }
+
+    async function loadClosedShiftsHistory() {
+      let shifts = [];
+      const client = typeof getSupabase === 'function' ? getSupabase() : window.supabaseClient;
+      if (client) {
+        try {
+          const { data } = await client.from('cash_shifts').select('*').eq('status', 'closed').order('closed_at', { ascending: false });
+          if (data && data.length > 0) shifts = data;
+        } catch(e) {}
+      }
+
+      if (shifts.length === 0) {
+        shifts = JSON.parse(localStorage.getItem('vortex_closed_shifts')) || [];
+      }
+
+      const tbody = document.getElementById('closedShiftsTableBody');
+      tbody.innerHTML = '';
+
+      if (shifts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px;">Nenhum turno anterior registrado.</td></tr>`;
+        return;
+      }
+
+      shifts.forEach(s => {
+        const opened = s.opened_at ? new Date(s.opened_at).toLocaleString('pt-BR') : (s.openedAt ? new Date(s.openedAt).toLocaleString('pt-BR') : '--');
+        const closed = s.closed_at ? new Date(s.closed_at).toLocaleString('pt-BR') : (s.closedAt ? new Date(s.closedAt).toLocaleString('pt-BR') : '--');
+        const initial = parseFloat(s.initial_balance ?? s.initialBalance ?? 0);
+        const counted = parseFloat(s.counted_cash ?? s.countedCash ?? 0);
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>#${String(s.id || s.shiftId || '101').slice(-6)}</strong></td>
+            <td>${s.operator || 'Operador'}</td>
+            <td>${opened}</td>
+            <td>${closed}</td>
+            <td>R$ ${initial.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td style="color:var(--success); font-weight:bold;">R$ ${counted.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td><span style="color:var(--danger); font-weight:bold;">FECHADO</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderCashState() {
+      const badge = document.getElementById('cashStatusBadge');
+      const btnOpen = document.getElementById('btnOpenCash');
+      const activeBtns = document.getElementById('activeCashButtons');
+
+      if (currentCashData.isOpen) {
+        badge.innerText = '🟢 ABERTO';
+        badge.style.color = 'var(--success)';
+        btnOpen.style.display = 'none';
+        activeBtns.style.display = 'flex';
+
+        document.getElementById('cashOperator').innerText = currentCashData.operator || '--';
+        document.getElementById('cashInitialBalance').innerText = `R$ ${currentCashData.initialBalance.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        document.getElementById('salesCash').innerText = `R$ ${currentCashData.salesCash.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        document.getElementById('salesDigital').innerText = `R$ ${currentCashData.salesDigital.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        document.getElementById('cashWithdrawals').innerText = `R$ ${currentCashData.withdrawals.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      } else {
+        badge.innerText = '🔴 FECHADO';
+        badge.style.color = 'var(--danger)';
+        btnOpen.style.display = 'inline-flex';
+        activeBtns.style.display = 'none';
+
+        document.getElementById('cashOperator').innerText = '--';
+        document.getElementById('cashInitialBalance').innerText = 'R$ 0,00';
+        document.getElementById('salesCash').innerText = 'R$ 0,00';
+        document.getElementById('salesDigital').innerText = 'R$ 0,00';
+        document.getElementById('cashWithdrawals').innerText = 'R$ 0,00';
+      }
+
+      const tbody = document.getElementById('movementsTableBody');
+      tbody.innerHTML = '';
+
+      if (!currentCashData.movements || currentCashData.movements.length === 0) {
+        tbody.innerHTML = `
+          <tr id="emptyMovementsRow">
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+              Nenhum caixa aberto ou movimentação registrada no turno atual.
+            </td>
+          </tr>`;
+      } else {
+        const colorMap = {
+          'SALDO INICIAL': 'var(--success)',
+          'SUPRIMENTO': 'var(--success)',
+          'AJUSTE (+)': 'var(--success)',
+          'SANGRIA': 'var(--warning)',
+          'DESPESA': 'var(--danger)',
+          'AJUSTE (-)': 'var(--danger)'
+        };
+
+        currentCashData.movements.forEach(m => {
+          const isNegative = m.type === 'SANGRIA' || m.type === 'DESPESA' || m.type === 'AJUSTE (-)';
+          const signal = isNegative ? '- ' : '';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${m.time}</td>
+            <td><span style="color:${colorMap[m.type] || 'var(--primary)'}; font-weight:bold;">${m.type}</span></td>
+            <td>${m.reason}</td>
+            <td>${signal}R$ ${parseFloat(m.val || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td>${m.operator}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    setInterval(() => {
+      document.getElementById('currentTimeHeader').innerText = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    window.onload = async function() {
+      applyTheme();
+      const settings = JSON.parse(localStorage.getItem('vortex_store_settings')) || { storeName: 'MEU ESTABELECIMENTO' };
+      document.getElementById('sidebarStoreName').innerText = settings.storeName || 'MEU ESTABELECIMENTO';
+      
+      await checkActiveShiftFromSupabase();
+    };
+  </script>
+</body>
+</html>
